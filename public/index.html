@@ -138,6 +138,22 @@ main{min-width:0;display:flex;flex-direction:column}
 .chip{background:#fff;border:1px solid var(--line);border-radius:7px;padding:7px 11px;min-width:78px}
 .chip .k{font-size:10px;color:var(--muted)}
 .chip .v{font-size:16px;font-weight:600}
+.chips3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.chipgrp{background:#fff;border:1px solid var(--line);border-radius:7px;padding:9px 12px}
+.cg-t{font-size:10px;color:var(--muted);margin-bottom:7px}
+.cg-row{display:flex;gap:14px;flex-wrap:wrap}
+.cg-i{display:flex;flex-direction:column;gap:1px}
+.cg-i b{font-size:16px;font-weight:700;line-height:1.1}
+.cg-i span{font-size:9.5px;color:var(--muted)}
+.icobtn{width:26px;height:26px;display:inline-grid;place-items:center;padding:0;font-size:13px;border-radius:6px}
+.tree-tools{display:flex;align-items:center;gap:5px;padding:6px 8px;border-bottom:1px solid var(--line)}
+.tree-tools .tsearch{flex:1;padding:0;border:0}
+.tcount{font-size:9.5px;color:var(--muted);background:#F1F4F3;border-radius:99px;padding:0 6px;margin-inline-start:5px}
+.qadd-menu{position:relative;display:inline-block}
+.qadd-list{position:absolute;inset-inline-start:0;top:30px;background:#fff;border:1px solid var(--line);border-radius:7px;box-shadow:var(--sh);z-index:10;min-width:150px;display:none}
+.qadd-list.open{display:block}
+.qadd-list div{padding:8px 12px;font-size:12px;cursor:pointer}
+.qadd-list div:hover{background:var(--teal-soft);color:var(--teal)}
 
 /* tree */
 .workspace{display:grid;grid-template-columns:330px 1fr;gap:12px;align-items:start}
@@ -146,6 +162,9 @@ main{min-width:0;display:flex;flex-direction:column}
 .tsearch input{width:100%;padding:6px 9px;border:1px solid var(--line-2);border-radius:6px;outline:none;font-size:11.8px}
 .tbody{padding:6px 8px 10px}
 .trow{display:flex;align-items:flex-start;gap:5px;padding:4px 6px;border-radius:5px;cursor:pointer;line-height:1.4}
+.tquick{flex-shrink:0;width:16px;height:16px;display:none;align-items:center;justify-content:center;border-radius:4px;background:var(--teal-soft);color:var(--teal);font-size:11px;font-weight:700;margin-top:1px}
+.trow:hover .tquick{display:flex}
+.tquick:hover{background:var(--teal);color:#fff}
 .trow:hover{background:#F2F6F5}
 .trow.sel{background:var(--teal-soft)}
 .tcar{width:11px;text-align:center;font-size:7px;color:var(--muted);flex:0 0 11px;padding-top:4px}
@@ -328,13 +347,15 @@ riskLevel:"درجة الخطورة",owner:"موجهة إلى",createdBy:"أنش�
 addResponse:"إضافة استجابة",cancel:"إلغاء",save:"حفظ",respText:"وصف الاستجابة",respTitle:"عنوان الاستجابة",assignTo:"موجهة إلى",respType:"النوع",
 noResp:"لا توجد استجابات بعد.",noRes:"لا توجد نتائج مسجلة.",noTest:"لا توجد اختبارات بعد.",
 objective:"هدف",risk:"خطر",response:"استجابة",test:"اختبار",result:"نتيجة",
-addTest:"إضافة اختبار",addResult:"إضافة نتيجة",testTitle:"عنوان الاختبار",testText:"وصف الاختبار",resultTitle:"عنوان النتيجة",resultText:"وصف النتيجة",
+addTest:"إضافة اختبار",addResult:"إضافة نتيجة",addRisk:"إضافة خطر",addObjective:"إضافة هدف",testTitle:"عنوان الاختبار",testText:"وصف الاختبار",resultTitle:"عنوان النتيجة",resultText:"وصف النتيجة",riskTitle:"عنوان الخطر",riskText:"وصف الخطر",objTitle:"عنوان الهدف",objText:"وصف الهدف",itemsCount:"عدد العناصر",noRisk:"لا توجد مخاطر بعد.",
 planned:"مخطط",testInprogress:"قيد التنفيذ",completed:"مكتمل",ineffective:"غير فعّالة",
 downloadTemplate:"⭳ قالب الاستيراد",addComponent:"مكوّن جديد",edit:"تعديل",
 newComponentNamePrompt:"اسم المكوّن الجديد (عربي):",newComponentSlugPrompt:"معرّف مختصر للمكوّن (إنجليزي، بدون مسافات):",editComponentNamePrompt:"الاسم الجديد للمكوّن:",
 compStats:"إحصائيات المكوّن",description:"الوصف",
 companyTitle:"بيانات الشركة",companySub:"المعلومات النظامية والمهنية للمكتب.",usersTitle:"المستخدمون",usersSub:"مستخدمو النظام وصلاحياتهم.",profileTitle:"ملفي الشخصي",profileSub:"بياناتك في النظام.",
 name:"الاسم",role:"الدور",email:"البريد",lastLogin:"آخر دخول",active:"نشط",inactive:"موقوف",
+editFirm:"تعديل بيانات الشركة",addUser:"إضافة مستخدم",newPasswordOptional:"كلمة مرور جديدة (اختياري)",leaveBlankKeep:"اتركه فارغاً للإبقاء على الحالية",
+role_owner:"مالك",role_admin:"مشرف",role_quality_lead:"مسؤول الجودة",role_manager:"مدير",role_staff:"موظف",role_viewer:"مُطّلع فقط",
 firmName:"اسم المكتب",license:"رقم الترخيص",cr:"السجل التجاري",city:"المدينة",country:"الدولة",phone:"الهاتف",partners:"الشركاء",staff:"الموظفون",engagements:"الارتباطات",scope:"النطاق",period:"فترة النظام",respScope:"المسؤول النهائي",opRespScope:"المسؤول التشغيلي",
 printedAt:"تاريخ الطباعة",assignedToMe:"موكلة إليّ",type_prev:"وقائية",type_det:"كاشفة",type_mon:"رقابية",
 open:"مفتوح",closed:"مغلق",monitored:"تحت المراقبة",effective:"فعّالة",partial:"فعّالة جزئياً",expand:"توسيع الكل",collapse:"طي الكل",components:"المكوّنات",allComp:"جميع المكوّنات",chat:"الدردشة",details:"التفاصيل",sendPh:"اكتب رسالة...",send:"إرسال",linkedTo:"مرتبطة بـ",changeLink:"تعديل الربط",allItems:"جميع العناصر",generalChat:"دردشة عامة على المكوّن",chatSub:"دردشة الفريق مرتبطة ببنود نظام الجودة.",noMsgs:"لا توجد رسائل بعد — ابدأ المحادثة.",unreadSep:"رسائل غير مقروءة",unread:"غير مقروءة",scope:"نطاق الدردشة",apply:"تطبيق",signup:"إنشاء حساب شركة جديدة",backLogin:"العودة لتسجيل الدخول",newAccount:"حساب شركة جديدة",newAccountSub:"سجّل مكتبك للبدء في نظام إدارة الجودة.",adminName:"اسم المسؤول",createAcc:"إنشاء الحساب",accCreated:"تم إنشاء الحساب بنجاح — كود الشركة:",reqFields:"الرجاء تعبئة الحقول المطلوبة.",confirmPass:"تأكيد كلمة المرور",passMismatch:"كلمتا المرور غير متطابقتين.",
@@ -362,13 +383,15 @@ riskLevel:"Risk level",owner:"Assigned to",createdBy:"Created by",date:"Date",ti
 addResponse:"Add response",cancel:"Cancel",save:"Save",respText:"Response description",respTitle:"Response title",assignTo:"Assign to",respType:"Type",
 noResp:"No responses yet.",noRes:"No results recorded.",noTest:"No tests yet.",
 objective:"Objective",risk:"Risk",response:"Response",test:"Test",result:"Result",
-addTest:"Add test",addResult:"Add result",testTitle:"Test title",testText:"Test description",resultTitle:"Result title",resultText:"Result description",
+addTest:"Add test",addResult:"Add result",addRisk:"Add risk",addObjective:"Add objective",testTitle:"Test title",testText:"Test description",resultTitle:"Result title",resultText:"Result description",riskTitle:"Risk title",riskText:"Risk description",objTitle:"Objective title",objText:"Objective description",itemsCount:"Item counts",noRisk:"No risks yet.",
 planned:"Planned",testInprogress:"In progress",completed:"Completed",ineffective:"Ineffective",
 downloadTemplate:"⭳ Import template",addComponent:"New component",edit:"Edit",
 newComponentNamePrompt:"New component name (Arabic):",newComponentSlugPrompt:"Short component slug (English, no spaces):",editComponentNamePrompt:"New name for the component:",
 compStats:"Component statistics",description:"Description",
 companyTitle:"Firm profile",companySub:"Statutory and professional details.",usersTitle:"Users",usersSub:"System users and permissions.",profileTitle:"My profile",profileSub:"Your details in the system.",
 name:"Name",role:"Role",email:"Email",lastLogin:"Last sign-in",active:"Active",inactive:"Suspended",
+editFirm:"Edit firm profile",addUser:"Add user",newPasswordOptional:"New password (optional)",leaveBlankKeep:"Leave blank to keep current",
+role_owner:"Owner",role_admin:"Admin",role_quality_lead:"Quality lead",role_manager:"Manager",role_staff:"Staff",role_viewer:"Viewer only",
 firmName:"Firm name",license:"License no.",cr:"CR number",city:"City",country:"Country",phone:"Phone",partners:"Partners",staff:"Staff",engagements:"Engagements",scope:"Scope",period:"System period",respScope:"Ultimate responsibility",opRespScope:"Operational responsibility",
 printedAt:"Printed on",assignedToMe:"Assigned to me",type_prev:"Preventive",type_det:"Detective",type_mon:"Monitoring",
 open:"Open",closed:"Closed",monitored:"Monitored",effective:"Effective",partial:"Partly effective",expand:"Expand all",collapse:"Collapse all",components:"Components",allComp:"All components",chat:"Chat",details:"Details",sendPh:"Type a message...",send:"Send",linkedTo:"Linked to",changeLink:"Change link",allItems:"All items",generalChat:"General component chat",chatSub:"Team chat linked to quality system items.",noMsgs:"No messages yet — start the conversation.",unreadSep:"Unread messages",unread:"Unread",scope:"Chat scope",apply:"Apply",signup:"Create a new firm account",backLogin:"Back to sign in",newAccount:"New firm account",newAccountSub:"Register your firm to start using the system.",adminName:"Administrator name",createAcc:"Create account",accCreated:"Account created — firm code:",reqFields:"Please fill in the required fields.",confirmPass:"Confirm password",passMismatch:"Passwords do not match.",
@@ -524,7 +547,8 @@ const KDB={obj:"objective",risk:"risk",resp:"response",test:"test",res:"result"}
 const kx=n=>K[n.kind]||n.kind;
 const ICON={obj:"◎",risk:"⚠",resp:"➜",test:"▣",res:"✔"};
 const ADD_META={
- risk:{labelKey:"addResponse",titleKey:"respTitle",textKey:"respText",kind:"resp",endpoint:"/responses",idField:"riskId",statusOpts:["inprog","done","late"]},
+ obj:{labelKey:"addRisk",titleKey:"riskTitle",textKey:"riskText",kind:"risk",endpoint:"/risks",idField:"objectiveId",statusOpts:["open","monitored","closed"],extra:"severity"},
+ risk:{labelKey:"addResponse",titleKey:"respTitle",textKey:"respText",kind:"resp",endpoint:"/responses",idField:"riskId",statusOpts:["inprog","done","late"],extra:"type"},
  resp:{labelKey:"addTest",titleKey:"testTitle",textKey:"testText",kind:"test",endpoint:"/tests",idField:"responseId",statusOpts:["planned","inprogress","completed"]},
  test:{labelKey:"addResult",titleKey:"resultTitle",textKey:"resultText",kind:"res",endpoint:"/results",idField:"testId",statusOpts:["effective","partial","ineffective"]}
 };
@@ -556,7 +580,7 @@ function fmtScope(compId,code){
  return code?nodeTitle(compId,code):L(compById(compId))+" — "+t("generalChat");}
 
 /* ---------------- state ---------------- */
-let state={page:"home",comp:"all",sel:null,q:"",adding:false,open:new Set(),navOpen:true,wTab:"details",cComp:"all",cNode:"all",relink:null,draft:""};
+let state={page:"home",comp:"all",sel:null,q:"",adding:false,addingObjective:false,addingUser:false,editingUserId:null,editingFirm:false,open:new Set(),navOpen:true,wTab:"details",cComp:"all",cNode:"all",relink:null,draft:""};
 
 function setLang(l){lang=l;document.body.dir=T[l].dir;document.documentElement.lang=l;document.documentElement.dir=T[l].dir;
  paintLogin();if(document.getElementById("app").style.display==="block"){paintChrome();render();}}
@@ -598,9 +622,9 @@ function buildNav(){
  const tt=totals();
  const canManage=MY_ROLE==="owner"||MY_ROLE==="admin";
  let p=`<div class="comp-h">${t("components")}${canManage?`<span class="cadd" id="btn-add-comp" title="${t("addComponent")}">+</span>`:""}</div>`;
- p+=`<div class="comp-item ${state.comp==="all"?"active":""}" data-comp="all"><span class="ci mono">★</span><span>${t("allComp")}</span>${unreadTotal()?`<span class="ubadge num" style="margin-inline-start:auto">${unreadTotal()}</span>`:`<span class="cn num">${tt.rk}</span>`}</div>`;
+ p+=`<div class="comp-item ${state.comp==="all"?"active":""}" data-comp="all"><span class="ci mono">★</span><span>${t("allComp")}</span>${unreadTotal()?`<span class="ubadge num" style="margin-inline-start:auto">${unreadTotal()}</span>`:tt.rk?`<span class="cn num">${tt.rk}</span>`:""}</div>`;
  p+=DATA.map(c=>{const st=statsOf(c);
-   return `<div class="comp-item ${state.comp===c.id?"active":""}" data-comp="${c.id}"><span class="ci mono">${c.num}</span><span style="flex:1">${esc(L(c))}</span>${canManage?`<span class="cedit" data-edit-comp="${c.dbId}" data-name="${esc(L(c))}" title="${t("edit")}">✎</span>`:""}${unreadIn(c.id,null)?`<span class="ubadge num" style="margin-inline-start:auto">${unreadIn(c.id,null)}</span>`:`<span class="cn num">${st.rk}</span>`}</div>`;}).join("");
+   return `<div class="comp-item ${state.comp===c.id?"active":""}" data-comp="${c.id}"><span class="ci mono">${c.num}</span><span style="flex:1">${esc(L(c))}</span>${canManage?`<span class="cedit" data-edit-comp="${c.dbId}" data-name="${esc(L(c))}" title="${t("edit")}">✎</span>`:""}${unreadIn(c.id,null)?`<span class="ubadge num" style="margin-inline-start:auto">${unreadIn(c.id,null)}</span>`:st.rk?`<span class="cn num">${st.rk}</span>`:""}</div>`;}).join("");
  panel.innerHTML=p;
  panel.querySelectorAll("[data-comp]").forEach(el=>el.onclick=()=>{
    state.comp=el.dataset.comp;state.sel=null;state.q="";state.adding=false;
@@ -678,14 +702,16 @@ function treeNode(n,q,cid){
  const has=n.kids.length>0,op=state.open.has(n.code)||(q&&has);
  const kids=has&&op?`<div class="tkids">${n.kids.filter(k=>subtreeMatches(k,q)).map(k=>treeNode(k,q,cid)).join("")}</div>`:"";
  const meta=`${esc(L(n.by))} · <span class="mono num">${n.date} · ${n.time}</span>`;
+ const nk=kx(n);
  return `<div class="tnode">
-  <div class="trow k-${kx(n)} ${state.sel===n.code?"sel":""}" data-node="${n.code}">
+  <div class="trow k-${nk} ${state.sel===n.code?"sel":""}" data-node="${n.code}">
    <span class="tcar" data-car="${n.code}">${has?`<span class="${op?"open":""}">▶</span>`:""}</span>
-   <span class="tico" style="color:${kindColor(n)}">${ICON[kx(n)]}</span>
+   <span class="tico" style="color:${kindColor(n)}">${ICON[nk]}</span>
    <span class="tmain">
-    <span class="tline"><span class="tlbl" title="${esc(L(n.d))}">${esc(L(n.t))}</span>${unreadIn(cid,n.code)?`<span class="ubadge num">${unreadIn(cid,n.code)}</span>`:""}<span class="tcode mono">${n.code}</span></span>
+    <span class="tline"><span class="tlbl" title="${esc(L(n.d))}">${esc(L(n.t))}</span>${n.kids.length?`<span class="tcount" title="${kidsLabel(nk)}">${n.kids.length}</span>`:""}${unreadIn(cid,n.code)?`<span class="ubadge num">${unreadIn(cid,n.code)}</span>`:""}<span class="tcode mono">${n.code}</span></span>
     <span class="tmeta">${meta}</span>
    </span>
+   ${ADD_META[nk]?`<span class="tquick" data-quick="${n.code}" title="+ ${t(ADD_META[nk].labelKey)}">+</span>`:""}
   </div>${kids}</div>`;}
 
 function viewQuality(){
@@ -698,26 +724,49 @@ function viewQuality(){
  }).join("")||`<div class="tempty">—</div>`;
  const legend=`<div class="tlegend"><span style="color:var(--teal)"><b>◎</b> ${t("objectives")}</span><span style="color:var(--high)"><b>⚠</b> ${t("risks")}</span><span style="color:var(--violet)"><b>➜</b> ${t("responses")}</span><span style="color:var(--med)"><b>▣</b> ${t("tests")}</span><span style="color:var(--low)"><b>✔</b> ${t("results")}</span></div>`;
  const canManage=MY_ROLE==="owner"||MY_ROLE==="admin";
- const backupBtns=canManage?`<button class="btn ghost xs" onclick="downloadTemplate()">${t("downloadTemplate")}</button>
-  <button class="btn ghost xs" onclick="doExport()">${t("exportData")}</button>
-  <button class="btn ghost xs" onclick="pickImportFile()">${t("importData")}</button>
+ const backupBtns=canManage?`<button class="btn ghost xs icobtn" onclick="downloadTemplate()" title="${t("downloadTemplate")}">⧉</button>
+  <button class="btn ghost xs icobtn" onclick="doExport()" title="${t("exportData")}">⭳</button>
+  <button class="btn ghost xs icobtn" onclick="pickImportFile()" title="${t("importData")}">⭱</button>
   <input type="file" id="imp-file" accept=".json,.xlsx,.xls" style="display:none" onchange="doImport(this.files[0]);this.value='';">`:"";
+ const opts=USERS.map((u,i)=>`<option value="${i}">${esc(L(u.name))}</option>`).join("");
+ const addObjBtn=(!all&&canManage)?`<button class="btn xs" id="btn-add-obj" title="+ ${t("addObjective")}">+ ${t("addObjective")}</button>`:"";
+ const addObjForm=state.addingObjective?`
+  <div class="add-form open" style="margin:8px">
+   <div class="field"><label>${t("objTitle")}</label><input id="fo-ttl"></div>
+   <div class="field"><label>${t("objText")}</label><textarea id="fo-text" rows="2"></textarea></div>
+   <div class="form-row">
+    <div class="field"><label>${t("ref")}</label><input id="fo-ref" placeholder="[1.28]"></div>
+    <div class="field"><label>${t("assignTo")}</label><select id="fo-to">${opts}</select></div></div>
+   <div style="display:flex;gap:6px"><button class="btn xs" id="btn-save-obj">${t("save")}</button><button class="btn ghost xs" id="btn-cancel-obj">${t("cancel")}</button></div></div>`:"";
  return printHead(title)+`
  <div class="page-head"><div><h2>${all?"":`<span class="mono" style="color:var(--muted);font-size:12px">${list[0].num}</span> `}${esc(title)}</h2><p>${t("compStats")}</p></div>
- <div class="side no-print">${backupBtns}<button class="btn ghost xs" id="btn-exp">${t("expand")}</button><button class="btn ghost xs" id="btn-col">${t("collapse")}</button><button class="btn ghost xs" onclick="window.print()">${t("print")}</button></div></div>
- <div class="chips">
-  <div class="chip"><div class="k">${t("objectives")}</div><div class="v num">${st.ob}</div></div>
-  <div class="chip"><div class="k">${t("risks")}</div><div class="v num">${st.rk}</div></div>
-  <div class="chip"><div class="k">${t("responses")}</div><div class="v num">${st.rs}</div></div>
-  <div class="chip"><div class="k">${t("tests")}</div><div class="v num">${st.ts}</div></div>
-  <div class="chip"><div class="k">${t("results")}</div><div class="v num">${st.rx}</div></div>
-  <div class="chip"><div class="k">${t("high")}</div><div class="v num" style="color:var(--high)">${st.h}</div></div>
-  <div class="chip"><div class="k">${t("medium")}</div><div class="v num" style="color:var(--med)">${st.m}</div></div>
-  <div class="chip"><div class="k">${t("low")}</div><div class="v num" style="color:var(--low)">${st.l}</div></div>
-  <div class="chip"><div class="k">${t("late")}</div><div class="v num" style="color:var(--high)">${st.late}</div></div>
-  <div class="chip" style="flex:1;min-width:150px"><div class="k">${t("severityMix")}</div><div class="meter" style="margin-top:7px"><i class="h" style="flex:${st.h}"></i><i class="m" style="flex:${st.m}"></i><i class="l" style="flex:${st.l}"></i></div></div></div>
+ <div class="side no-print">${backupBtns}<button class="btn ghost xs icobtn" onclick="window.print()" title="${t("print")}">⎙</button></div></div>
+ <div class="chips3">
+  <div class="chipgrp"><div class="cg-t">${t("itemsCount")}</div><div class="cg-row">
+   <div class="cg-i"><b>${st.ob}</b><span>${t("objectives")}</span></div>
+   <div class="cg-i"><b>${st.rk}</b><span>${t("risks")}</span></div>
+   <div class="cg-i"><b>${st.rs}</b><span>${t("responses")}</span></div>
+   <div class="cg-i"><b>${st.ts}</b><span>${t("tests")}</span></div>
+   <div class="cg-i"><b>${st.rx}</b><span>${t("results")}</span></div></div></div>
+  <div class="chipgrp"><div class="cg-t">${t("severityMix")}</div><div class="cg-row">
+   <div class="cg-i" style="color:var(--high)"><b>${st.h}</b><span>${t("high")}</span></div>
+   <div class="cg-i" style="color:var(--med)"><b>${st.m}</b><span>${t("medium")}</span></div>
+   <div class="cg-i" style="color:var(--low)"><b>${st.l}</b><span>${t("low")}</span></div></div>
+   <div class="meter" style="margin-top:7px"><i class="h" style="flex:${st.h||1}"></i><i class="m" style="flex:${st.m||1}"></i><i class="l" style="flex:${st.l||1}"></i></div></div>
+  <div class="chipgrp"><div class="cg-t">${t("respStatus")}</div><div class="cg-row">
+   <div class="cg-i" style="color:var(--high)"><b>${st.late}</b><span>${t("late")}</span></div>
+   <div class="cg-i" style="color:var(--teal)"><b>${st.inprog}</b><span>${t("inprog")}</span></div>
+   <div class="cg-i" style="color:var(--low)"><b>${st.done}</b><span>${t("done")}</span></div></div></div>
+ </div>
  <div class="workspace">
-  <div class="card tree"><div class="tsearch no-print"><input id="q-search" placeholder="${t("searchPh")}" value="${esc(state.q)}"></div>${legend}<div class="tbody">${tree}</div></div>
+  <div class="card tree">
+   <div class="tree-tools no-print">
+    <div class="tsearch"><input id="q-search" placeholder="${t("searchPh")}" value="${esc(state.q)}"></div>
+    <button class="btn ghost xs icobtn" id="btn-exp" title="${t("expand")}">⤢</button>
+    <button class="btn ghost xs icobtn" id="btn-col" title="${t("collapse")}">⤡</button>
+    ${addObjBtn}
+   </div>
+   ${addObjForm}${legend}<div class="tbody">${tree}</div></div>
   <div class="card detail">
    <div class="wtabs no-print"><div class="wtab ${state.wTab==="details"?"on":""}" data-wtab="details">${t("details")}</div>
    <div class="wtab ${state.wTab==="chat"?"on":""}" data-wtab="chat">✉ ${t("chat")} ${unreadIn(state.comp==="all"?(state.sel?ownerOf(state.sel).id:"all"):state.comp,state.sel||null)?`<span class="ubadge num">${unreadIn(state.comp==="all"?(state.sel?ownerOf(state.sel).id:"all"):state.comp,state.sel||null)}</span>`:`<span class="cnt num">${scopeMsgs().length}</span>`}</div></div>
@@ -757,10 +806,11 @@ function detail(){
    <div class="field"><label>${t(am.textKey)}</label><textarea id="f-text" rows="2"></textarea></div>
    <div class="form-row">
     ${am.kind!=="res"?`<div class="field"><label>${t("assignTo")}</label><select id="f-to">${opts}</select></div>`:""}
-    ${am.kind==="resp"?`<div class="field"><label>${t("respType")}</label><select id="f-type"><option value="prev">${t("type_prev")}</option><option value="det">${t("type_det")}</option><option value="mon">${t("type_mon")}</option></select></div>`:""}
+    ${am.extra==="type"?`<div class="field"><label>${t("respType")}</label><select id="f-type"><option value="prev">${t("type_prev")}</option><option value="det">${t("type_det")}</option><option value="mon">${t("type_mon")}</option></select></div>`:""}
+    ${am.extra==="severity"?`<div class="field"><label>${t("riskLevel")}</label><select id="f-sev"><option value="high">${t("high")}</option><option value="medium" selected>${t("medium")}</option><option value="low">${t("low")}</option></select></div>`:""}
     <div class="field"><label>${t("status")}</label><select id="f-st">${am.statusOpts.map(s=>`<option value="${s}">${t(s==="inprogress"?"testInprogress":s)}</option>`).join("")}</select></div></div>
    <div style="display:flex;gap:6px"><button class="btn xs" id="btn-save">${t("save")}</button><button class="btn ghost xs" id="btn-cancel">${t("cancel")}</button></div></div>`:"";
- const noKidsKey={risk:"noResp",resp:"noTest",test:"noRes"}[nk]||"noRes";
+ const noKidsKey={obj:"noRisk",risk:"noResp",resp:"noTest",test:"noRes"}[nk]||"noRes";
  return `<div class="d-head">
    <div class="d-eyebrow"><span style="color:${kindColor(n)};font-size:12px">${ICON[kx(n)]}</span>${badge}<span class="mono">${n.code}</span><span>${esc(L(c))}</span>${par?`<span>›</span><span>${esc(L(par.t))}</span>`:""}</div>
    <h3 class="d-title">${esc(L(n.t))}</h3><p class="d-desc">${esc(L(n.d))}</p></div>
@@ -820,25 +870,74 @@ function viewChat(){
 function viewCompany(){const kv=(k,v)=>`<div class="kv"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`;
  const canManage=MY_ROLE==="owner"||MY_ROLE==="admin";
  const backupBtns=canManage?`
-  <button class="btn ghost xs" onclick="doExport()">${t("exportData")}</button>
-  <button class="btn ghost xs" onclick="pickImportFile()">${t("importData")}</button>
-  <input type="file" id="imp-file" accept="application/json" style="display:none" onchange="doImport(this.files[0]);this.value='';">`:"";
+  <button class="btn ghost xs icobtn" onclick="downloadTemplate()" title="${t("downloadTemplate")}">⧉</button>
+  <button class="btn ghost xs icobtn" onclick="doExport()" title="${t("exportData")}">⭳</button>
+  <button class="btn ghost xs icobtn" onclick="pickImportFile()" title="${t("importData")}">⭱</button>
+  <input type="file" id="imp-file" accept=".json,.xlsx,.xls" style="display:none" onchange="doImport(this.files[0]);this.value='';">`:"";
+ const editBtn=canManage?`<button class="btn xs" id="btn-edit-firm">${state.editingFirm?t("cancel"):t("editFirm")}</button>`:"";
+ const num=v=>(v==null||v==="—")?0:v;
+ const editForm=(canManage&&state.editingFirm)?`<div class="card" style="margin-bottom:12px"><div class="card-b">
+   <div class="form-row">
+    <div class="field"><label>${t("firmName")}</label><input id="ef-name" value="${esc(L(FIRM.name))}"></div>
+    <div class="field"><label>${t("license")}</label><input id="ef-license" value="${FIRM.license==="—"?"":esc(FIRM.license)}"></div></div>
+   <div class="form-row">
+    <div class="field"><label>${t("cr")}</label><input id="ef-cr" value="${FIRM.cr==="—"?"":esc(FIRM.cr)}"></div>
+    <div class="field"><label>${t("phone")}</label><input id="ef-phone" value="${FIRM.phone==="—"?"":esc(FIRM.phone)}"></div></div>
+   <div class="form-row">
+    <div class="field"><label>${t("city")}</label><input id="ef-city" value="${esc(L(FIRM.city))}"></div>
+    <div class="field"><label>${t("country")}</label><input id="ef-country" value="${esc(L(FIRM.country))}"></div></div>
+   <div class="form-row">
+    <div class="field"><label>${t("partners")}</label><input id="ef-partners" type="number" min="0" value="${num(FIRM.partners)}"></div>
+    <div class="field"><label>${t("staff")}</label><input id="ef-staff" type="number" min="0" value="${num(FIRM.staff)}"></div>
+    <div class="field"><label>${t("engagements")}</label><input id="ef-engagements" type="number" min="0" value="${num(FIRM.engagements)}"></div></div>
+   <div class="field"><label>${t("scope")}</label><textarea id="ef-scope" rows="2">${esc(L(FIRM.scope))}</textarea></div>
+   <div style="display:flex;gap:6px"><button class="btn xs" id="btn-save-firm">${t("save")}</button></div>
+  </div></div>`:"";
  return printHead(t("companyTitle"))+`
  <div class="page-head"><div><h2>${t("companyTitle")}</h2><p>${t("companySub")}</p></div>
- <div class="side no-print">${backupBtns}<button class="btn ghost xs" onclick="window.print()">${t("print")}</button></div></div>
+ <div class="side no-print">${backupBtns}${editBtn}<button class="btn ghost xs icobtn" onclick="window.print()" title="${t("print")}">⎙</button></div></div>
+ ${editForm}
  <div class="grid2b"><div class="card"><div class="card-h"><h3>${t("companyTitle")}</h3></div><div class="card-b">
   ${kv(t("firmName"),L(FIRM.name))}${kv(t("license"),FIRM.license)}${kv(t("cr"),FIRM.cr)}${kv(t("city"),L(FIRM.city))}${kv(t("country"),L(FIRM.country))}${kv(t("phone"),FIRM.phone)}</div></div>
  <div class="card"><div class="card-h"><h3>ISQM 1</h3></div><div class="card-b">
   ${kv(t("scope"),L(FIRM.scope))}${kv(t("period"),L(FIRM.period))}${kv(t("respScope"),L(FIRM.respName||{}))}${kv(t("opRespScope"),L(FIRM.opRespName||{}))}${kv(t("partners"),FIRM.partners)}${kv(t("staff"),FIRM.staff)}${kv(t("engagements"),FIRM.engagements)}</div></div></div>`;}
 
-function viewUsers(){const rows=USERS.map(u=>`<tr>
- <td><div style="display:flex;align-items:center;gap:8px"><span class="avatar" style="width:23px;height:23px;font-size:9.5px">${initials(u.name)}</span>${esc(L(u.name))}</div></td>
- <td>${esc(L(u.role))}</td><td class="mono" style="font-size:11px">${u.email}</td><td class="mono num">${u.last}</td>
- <td><span class="badge ${u.active?"b-l":"b-n"}">${u.active?t("active"):t("inactive")}</span></td></tr>`).join("");
+const ROLE_KEYS=["owner","admin","quality_lead","manager","staff","viewer"];
+function viewUsers(){
+ const canManage=MY_ROLE==="owner"||MY_ROLE==="admin";
+ const rows=USERS.map(u=>{
+  const editing=state.editingUserId===u.id;
+  const editRow=editing?`<tr><td colspan="6"><div class="add-form open" style="margin:6px 0">
+    <div class="form-row">
+     <div class="field"><label>${t("name")}</label><input id="eu-name" value="${esc(L(u.name))}"></div>
+     <div class="field"><label>${t("email")}</label><input id="eu-email" value="${u.email==="—"?"":esc(u.email)}"></div></div>
+    <div class="form-row">
+     <div class="field"><label>${t("role")}</label><select id="eu-role">${ROLE_KEYS.map(r=>`<option value="${r}" ${u.roleSlug===r?"selected":""}>${t("role_"+r)}</option>`).join("")}</select></div>
+     <div class="field"><label>${t("status")}</label><select id="eu-active"><option value="1" ${u.active?"selected":""}>${t("active")}</option><option value="0" ${!u.active?"selected":""}>${t("inactive")}</option></select></div></div>
+    <div class="field"><label>${t("newPasswordOptional")}</label><input id="eu-pass" type="password" placeholder="${t("leaveBlankKeep")}"></div>
+    <div style="display:flex;gap:6px"><button class="btn xs" id="btn-save-user" data-uid="${u.id}">${t("save")}</button><button class="btn ghost xs" id="btn-cancel-user">${t("cancel")}</button></div>
+   </div></td></tr>`:"";
+  return `<tr>
+   <td><div style="display:flex;align-items:center;gap:8px"><span class="avatar" style="width:23px;height:23px;font-size:9.5px">${initials(u.name)}</span>${esc(L(u.name))}</div></td>
+   <td>${esc(L(u.role))}</td><td class="mono" style="font-size:11px">${u.email}</td><td class="mono num">${u.last}</td>
+   <td><span class="badge ${u.active?"b-l":"b-n"}">${u.active?t("active"):t("inactive")}</span></td>
+   <td>${canManage?`<span class="cedit" style="color:var(--muted)" data-edit-user-btn="${u.id}" title="${t("edit")}">✎</span>`:""}</td></tr>${editRow}`;
+ }).join("");
+ const addForm=(canManage&&state.addingUser)?`<div class="card" style="margin-bottom:12px"><div class="card-b">
+   <div class="form-row">
+    <div class="field"><label>${t("name")}</label><input id="nu-name"></div>
+    <div class="field"><label>${t("user")}</label><input id="nu-username" autocomplete="off"></div></div>
+   <div class="form-row">
+    <div class="field"><label>${t("email")}</label><input id="nu-email" type="email"></div>
+    <div class="field"><label>${t("pass")}</label><input id="nu-pass" type="password"></div></div>
+   <div class="field"><label>${t("role")}</label><select id="nu-role">${ROLE_KEYS.map(r=>`<option value="${r}" ${r==="staff"?"selected":""}>${t("role_"+r)}</option>`).join("")}</select></div>
+   <div style="display:flex;gap:6px"><button class="btn xs" id="btn-save-newuser">${t("save")}</button><button class="btn ghost xs" id="btn-cancel-newuser">${t("cancel")}</button></div>
+  </div></div>`:"";
  return printHead(t("usersTitle"))+`
  <div class="page-head"><div><h2>${t("usersTitle")}</h2><p>${t("usersSub")}</p></div>
- <div class="side no-print"><button class="btn ghost xs" onclick="window.print()">${t("print")}</button></div></div>
- <div class="card"><table><thead><tr><th>${t("name")}</th><th>${t("role")}</th><th>${t("email")}</th><th>${t("lastLogin")}</th><th>${t("status")}</th></tr></thead><tbody>${rows}</tbody></table></div>`;}
+ <div class="side no-print">${canManage?`<button class="btn xs" id="btn-add-user">+ ${t("addUser")}</button>`:""}<button class="btn ghost xs icobtn" onclick="window.print()" title="${t("print")}">⎙</button></div></div>
+ ${addForm}
+ <div class="card"><table><thead><tr><th>${t("name")}</th><th>${t("role")}</th><th>${t("email")}</th><th>${t("lastLogin")}</th><th>${t("status")}</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;}
 
 function viewProfile(){const me=P(ME),mine=[];
  DATA.forEach(c=>walk(c,n=>{if(kx(n)==="risk"&&L(n.to)===L(me))mine.push({n,c});}));
@@ -879,6 +978,8 @@ function bind(){
    state.open.has(k)?state.open.delete(k):state.open.add(k);render();});
  v.querySelectorAll("[data-node]").forEach(el=>el.onclick=e=>{e.stopPropagation();const k=el.dataset.node;
    state.sel=k;state.adding=false;state.relink=null;state.open.add(k);render();});
+ v.querySelectorAll("[data-quick]").forEach(el=>el.onclick=e=>{e.stopPropagation();const k=el.dataset.quick;
+   state.sel=k;state.wTab="details";state.adding=true;state.relink=null;state.open.add(k);render();});
  v.querySelectorAll("[data-wtab]").forEach(el=>el.onclick=()=>{state.wTab=el.dataset.wtab;state.relink=null;render();});
  v.querySelectorAll("[data-relink]").forEach(el=>el.onclick=e=>{e.stopPropagation();const id=+el.dataset.relink;
    state.relink=state.relink===id?null:id;render();});
@@ -922,12 +1023,78 @@ function bind(){
   const payload={title:ttl,desc:txt||ttl,status:document.getElementById("f-st").value};
   payload[am.idField]=n.dbId;
   if(am.kind!=="res"){const toIdx=+document.getElementById("f-to").value;payload.assignedTo=USERS[toIdx]&&USERS[toIdx].id;}
-  if(am.kind==="resp")payload.type=document.getElementById("f-type").value;
+  if(am.extra==="type")payload.type=document.getElementById("f-type").value;
+  if(am.extra==="severity")payload.severity=document.getElementById("f-sev").value;
   try{
    await api(am.endpoint,{method:"POST",body:JSON.stringify(payload)});
    await loadAll();
   }catch(e){alert(e.message);}
-  state.adding=false;render();};}
+  state.adding=false;render();}
+ const addObj=document.getElementById("btn-add-obj");
+ if(addObj)addObj.onclick=()=>{state.addingObjective=!state.addingObjective;render();};
+ const cancelObj=document.getElementById("btn-cancel-obj");
+ if(cancelObj)cancelObj.onclick=()=>{state.addingObjective=false;render();};
+ const saveObj=document.getElementById("btn-save-obj");
+ if(saveObj)saveObj.onclick=async()=>{
+  const ttl=document.getElementById("fo-ttl").value.trim(),txt=document.getElementById("fo-text").value.trim();
+  if(!ttl){document.getElementById("fo-ttl").focus();return;}
+  const list=comps();if(!list[0])return;
+  const toIdx=+document.getElementById("fo-to").value;
+  try{
+   await api("/objectives",{method:"POST",body:JSON.stringify({componentId:list[0].dbId,title:ttl,desc:txt||ttl,
+     standardRef:document.getElementById("fo-ref").value.trim(),ownerId:USERS[toIdx]&&USERS[toIdx].id})});
+   await loadAll();
+  }catch(e){alert(e.message);}
+  state.addingObjective=false;render();};
+ const addUser=document.getElementById("btn-add-user");
+ if(addUser)addUser.onclick=()=>{state.addingUser=!state.addingUser;render();};
+ const cancelNewUser=document.getElementById("btn-cancel-newuser");
+ if(cancelNewUser)cancelNewUser.onclick=()=>{state.addingUser=false;render();};
+ const saveNewUser=document.getElementById("btn-save-newuser");
+ if(saveNewUser)saveNewUser.onclick=async()=>{
+  const name=document.getElementById("nu-name").value.trim(),username=document.getElementById("nu-username").value.trim(),
+    pass=document.getElementById("nu-pass").value;
+  if(!name||!username||!pass){alert(t("reqFields"));return;}
+  try{
+   await api("/users",{method:"POST",body:JSON.stringify({fullName:name,username,password:pass,
+     email:document.getElementById("nu-email").value.trim(),role:document.getElementById("nu-role").value})});
+   await loadAll();state.addingUser=false;render();
+  }catch(e){alert(e.message);}};
+ v.querySelectorAll("[data-edit-user-btn]").forEach(el=>el.onclick=()=>{
+   const id=el.dataset.editUserBtn;state.editingUserId=state.editingUserId===id?null:id;render();});
+ const cancelUser=document.getElementById("btn-cancel-user");
+ if(cancelUser)cancelUser.onclick=()=>{state.editingUserId=null;render();};
+ const saveUser=document.getElementById("btn-save-user");
+ if(saveUser)saveUser.onclick=async()=>{
+  const uid=saveUser.dataset.uid;
+  const pass=document.getElementById("eu-pass").value;
+  try{
+   await api("/users/"+uid,{method:"PATCH",body:JSON.stringify({
+     fullName:document.getElementById("eu-name").value.trim(),
+     email:document.getElementById("eu-email").value.trim(),
+     role:document.getElementById("eu-role").value,
+     isActive:document.getElementById("eu-active").value==="1",
+     password:pass||undefined})});
+   await loadAll();state.editingUserId=null;render();
+  }catch(e){alert(e.message);}};
+ const editFirm=document.getElementById("btn-edit-firm");
+ if(editFirm)editFirm.onclick=()=>{state.editingFirm=!state.editingFirm;render();};
+ const saveFirm=document.getElementById("btn-save-firm");
+ if(saveFirm)saveFirm.onclick=async()=>{
+  try{
+   await api("/firm",{method:"PATCH",body:JSON.stringify({
+     name:document.getElementById("ef-name").value.trim(),
+     license:document.getElementById("ef-license").value.trim(),
+     cr:document.getElementById("ef-cr").value.trim(),
+     phone:document.getElementById("ef-phone").value.trim(),
+     city:document.getElementById("ef-city").value.trim(),
+     country:document.getElementById("ef-country").value.trim(),
+     partners:+document.getElementById("ef-partners").value||0,
+     staff:+document.getElementById("ef-staff").value||0,
+     engagements:+document.getElementById("ef-engagements").value||0,
+     scope:document.getElementById("ef-scope").value.trim()})});
+   await loadAll();state.editingFirm=false;render();
+  }catch(e){alert(e.message);}};}
 
 async function sendMsg(){
  const inp=document.getElementById("c-in");if(!inp)return;
@@ -1009,7 +1176,7 @@ document.getElementById("btn-logout").onclick=()=>{TOKEN=null;localStorage.remov
  document.getElementById("app").style.display="none";
  document.getElementById("login").style.display="grid";
  DATA.length=0;CHAT.length=0;USERS.length=0;PEOPLE.length=0;ME=0;
- state={page:"home",comp:"all",sel:null,q:"",adding:false,open:new Set(),navOpen:true,wTab:"details",cComp:"all",cNode:"all",relink:null,draft:""};};
+ state={page:"home",comp:"all",sel:null,q:"",adding:false,addingObjective:false,addingUser:false,editingUserId:null,editingFirm:false,open:new Set(),navOpen:true,wTab:"details",cComp:"all",cNode:"all",relink:null,draft:""};};
 paintLogin();
 if(TOKEN){enterApp().catch(()=>{TOKEN=null;localStorage.removeItem("isqm_token");});}
 </script>
