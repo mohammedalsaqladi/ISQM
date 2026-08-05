@@ -195,6 +195,19 @@ CREATE TABLE results (
 CREATE INDEX idx_results_response ON results(response_id);
 
 -- ---------------------------------------------------------------------
+-- 7.5 REGISTRATION ATTEMPTS  (منع تكرار إنشاء الحساب عند تعدد النقر/إعادة الإرسال)
+--     مفتاح idempotency يُنشئه المتصفح مرة واحدة لكل محاولة تسجيل، فيمنع
+--     إنشاء أكثر من شركة/مستخدم واحد لنفس الطلب حتى مع الضغط عدة مرات.
+-- ---------------------------------------------------------------------
+CREATE TABLE registration_attempts (
+    idempotency_key VARCHAR(80) PRIMARY KEY,
+    firm_id         UUID REFERENCES firms(id) ON DELETE CASCADE,
+    user_id         UUID REFERENCES users(id) ON DELETE CASCADE,
+    firm_code       VARCHAR(20),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ---------------------------------------------------------------------
 -- 8. ATTACHMENTS  (المرفقات — أدلة الجودة)
 -- ---------------------------------------------------------------------
 CREATE TABLE attachments (
