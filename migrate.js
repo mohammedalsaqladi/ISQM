@@ -9,7 +9,8 @@ const FRESH = process.argv.includes('--fresh');
 const DROP = `
 DROP VIEW  IF EXISTS v_unread_by_item, v_unread_by_component, v_component_stats CASCADE;
 DROP TABLE IF EXISTS activity_log, chat_reads, chat_messages, attachments,
-                     results, responses, risks, objectives, components, users, firms CASCADE;
+                     results, responses, risks, objectives, components, users, firms,
+                     registration_attempts CASCADE;
 DROP TYPE  IF EXISTS severity_level, risk_status, response_status, response_type,
                      result_status, user_role, item_kind CASCADE;
 DROP FUNCTION IF EXISTS set_updated_at CASCADE;
