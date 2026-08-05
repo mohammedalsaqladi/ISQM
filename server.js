@@ -77,9 +77,13 @@ const BASE_COMPONENTS = [
 ];
 
 app.post('/api/auth/register', wrap(async (req, res) => {
-  const { firmName, cr, city, adminName, email, username, password, idemKey } = req.body || {};
-  if (!firmName || !adminName || !username || !password)
+  const { firmName, firmCode, cr, city, adminName, email, username, password, idemKey } = req.body || {};
+  if (!firmName || !adminName || !username || !password || !firmCode)
     return res.status(400).json({ error: 'missing_fields' });
+
+  const code = String(firmCode).trim().toUpperCase();
+  if (!/^[A-Z0-9_-]{3,20}$/.test(code))
+    return res.status(400).json({ error: 'invalid_firm_code' }); // 3-20 حرف/رقم إنجليزي، بدون مسافات
 
   // ---- منع التكرار: نقرة مزدوجة / إعادة إرسال لنفس الطلب لا تُنشئ شركة ثانية.
   // نقفل مفتاح idemKey أولاً داخل نفس المعاملة (transaction)؛ لو كان محجوزاً
@@ -105,12 +109,9 @@ app.post('/api/auth/register', wrap(async (req, res) => {
         if (!lock.rowCount) { const e = new Error('duplicate_submission'); e.code = 'DUP_SUBMIT'; throw e; }
       }
 
-      let code, ok = false;
-      for (let i = 0; i < 20 && !ok; i++) {
-        code = 'ISQM-' + Math.floor(100 + Math.random() * 900);
-        const dup = await c.query('SELECT 1 FROM firms WHERE firm_code=$1', [code]);
-        ok = dup.rowCount === 0;
-      }
+      const dup = await c.query('SELECT 1 FROM firms WHERE firm_code=$1', [code]);
+      if (dup.rowCount) { const e = new Error('firm_code_taken'); e.code = 'CODE_TAKEN'; throw e; }
+
       const f = await c.query(
         `INSERT INTO firms (firm_code,name_ar,name_en,cr_no,city_ar,city_en,email,
                             period_start,period_end)
@@ -139,6 +140,7 @@ app.post('/api/auth/register', wrap(async (req, res) => {
       return { code, firmId, uid: u.rows[0].id };
     });
   } catch (e) {
+    if (e.code === 'CODE_TAKEN') return res.status(409).json({ error: 'firm_code_taken' });
     if (e.code === 'DUP_SUBMIT') {
       const prev = await query(
         'SELECT firm_id, user_id, firm_code FROM registration_attempts WHERE idempotency_key=$1', [idemKey]);
@@ -159,7 +161,7 @@ app.post('/api/auth/register', wrap(async (req, res) => {
 // ================================================================= TREE
 app.get('/api/tree', auth, wrap(async (req, res) => {
   const fid = req.user.fid;
-  const [comps, objs, risks, resps, results] = await Promise.all([
+  const [comps, objs, risks, resps, tests, results] = await Promise.all([
     query(`SELECT id,slug,seq,name_ar,name_en FROM components WHERE firm_id=$1 ORDER BY seq`, [fid]),
     query(`SELECT o.*, ow.full_name_ar ow_ar, ow.full_name_en ow_en,
                   cb.full_name_ar cb_ar, cb.full_name_en cb_en
@@ -176,6 +178,11 @@ app.get('/api/tree', auth, wrap(async (req, res) => {
              FROM responses p
              LEFT JOIN users ow ON ow.id=p.assigned_to LEFT JOIN users cb ON cb.id=p.created_by
             WHERE p.firm_id=$1 ORDER BY p.sort_order, p.code`, [fid]),
+    query(`SELECT tt.*, ow.full_name_ar ow_ar, ow.full_name_en ow_en,
+                  cb.full_name_ar cb_ar, cb.full_name_en cb_en
+             FROM tests tt
+             LEFT JOIN users ow ON ow.id=tt.assigned_to LEFT JOIN users cb ON cb.id=tt.created_by
+            WHERE tt.firm_id=$1 ORDER BY tt.sort_order, tt.code`, [fid]),
     query(`SELECT x.*, cb.full_name_ar cb_ar, cb.full_name_en cb_en
              FROM results x LEFT JOIN users cb ON cb.id=x.created_by
             WHERE x.firm_id=$1 ORDER BY x.code`, [fid])
@@ -188,7 +195,7 @@ app.get('/api/tree', auth, wrap(async (req, res) => {
   }));
   tree.forEach((c) => { byId[c.dbId] = c; });
 
-  const oMap = {}, rMap = {}, sMap = {};
+  const oMap = {}, rMap = {}, sMap = {}, tMap = {};
   objs.rows.forEach((o) => {
     const n = {
       kind: 'objective', dbId: o.id, code: o.code, ref: o.standard_ref || '',
@@ -219,6 +226,16 @@ app.get('/api/tree', auth, wrap(async (req, res) => {
     sMap[p.id] = n;
     if (rMap[p.risk_id]) rMap[p.risk_id].kids.push(n);
   });
+  tests.rows.forEach((tt) => {
+    const n = {
+      kind: 'test', dbId: tt.id, code: tt.code, status: tt.status,
+      t: person(tt.title_ar, tt.title_en), d: person(tt.desc_ar, tt.desc_en),
+      to: person(tt.ow_ar, tt.ow_en), by: person(tt.cb_ar, tt.cb_en),
+      date: dpart(tt.created_at), time: tpart(tt.created_at), kids: []
+    };
+    tMap[tt.id] = n;
+    if (sMap[tt.response_id]) sMap[tt.response_id].kids.push(n);
+  });
   results.rows.forEach((x) => {
     const n = {
       kind: 'result', dbId: x.id, code: x.code, status: x.status,
@@ -226,10 +243,36 @@ app.get('/api/tree', auth, wrap(async (req, res) => {
       by: person(x.cb_ar, x.cb_en), to: person(x.cb_ar, x.cb_en),
       date: dpart(x.tested_at || x.created_at), time: tpart(x.tested_at || x.created_at), kids: []
     };
-    if (sMap[x.response_id]) sMap[x.response_id].kids.push(n);
+    if (tMap[x.test_id]) tMap[x.test_id].kids.push(n);
   });
 
   res.json(tree);
+}));
+
+// ================================================================= COMPONENTS
+app.post('/api/components', auth, requireAdmin, wrap(async (req, res) => {
+  const { slug, nameAr, nameEn, descAr, descEn, seq } = req.body || {};
+  if (!slug || !nameAr) return res.status(400).json({ error: 'missing_fields' });
+  if (!/^[a-z0-9_-]{2,30}$/.test(slug)) return res.status(400).json({ error: 'invalid_slug' });
+  const dup = await query('SELECT 1 FROM components WHERE firm_id=$1 AND slug=$2', [req.user.fid, slug]);
+  if (dup.rowCount) return res.status(409).json({ error: 'slug_taken' });
+  const n = await query('SELECT COALESCE(MAX(seq),0)::int AS m FROM components WHERE firm_id=$1', [req.user.fid]);
+  const r = await query(
+    `INSERT INTO components (firm_id,slug,seq,name_ar,name_en,desc_ar,desc_en)
+     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+    [req.user.fid, slug, seq || (n.rows[0].m + 1), nameAr, nameEn || nameAr, descAr || null, descEn || null]);
+  res.json({ ok: true, id: r.rows[0].id });
+}));
+
+app.patch('/api/components/:id', auth, requireAdmin, wrap(async (req, res) => {
+  const { nameAr, nameEn, descAr, descEn, seq } = req.body || {};
+  const r = await query(
+    `UPDATE components SET name_ar=COALESCE($1,name_ar), name_en=COALESCE($2,name_en),
+            desc_ar=COALESCE($3,desc_ar), desc_en=COALESCE($4,desc_en), seq=COALESCE($5,seq)
+      WHERE id=$6 AND firm_id=$7 RETURNING id`,
+    [nameAr || null, nameEn || null, descAr || null, descEn || null, seq || null, req.params.id, req.user.fid]);
+  if (!r.rowCount) return res.status(404).json({ error: 'not_found' });
+  res.json({ ok: true });
 }));
 
 // ================================================================= FIRM / USERS
@@ -424,17 +467,52 @@ app.patch('/api/responses/:id', auth, wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// ================================================================= TESTS
+app.post('/api/tests', auth, wrap(async (req, res) => {
+  const { responseId, title, desc, assignedTo, status, dueDate } = req.body || {};
+  if (!responseId || !title) return res.status(400).json({ error: 'missing_fields' });
+  const out = await tx(async (c) => {
+    const code = 'TS-' + await nextCode(c, 'tests', '', req.user.fid);
+    const r = await c.query(
+      `INSERT INTO tests (firm_id,response_id,code,title_ar,title_en,desc_ar,desc_en,
+                           status,assigned_to,created_by,due_date)
+       VALUES ($1,$2,$3,$4,$4,$5,$5,$6,$7,$8,$9) RETURNING id,code,created_at`,
+      [req.user.fid, responseId, code, title, desc || title,
+       status || 'planned', assignedTo || req.user.uid, req.user.uid, dueDate || null]);
+    await c.query(
+      `INSERT INTO activity_log (firm_id,user_id,action,item_kind,item_id,new_value)
+       VALUES ($1,$2,'created','test',$3,$4)`,
+      [req.user.fid, req.user.uid, r.rows[0].id, JSON.stringify({ title, status })]);
+    return r.rows[0];
+  });
+  res.json({ ok: true, code: out.code, id: out.id });
+}));
+
+app.patch('/api/tests/:id', auth, wrap(async (req, res) => {
+  const { title, desc, assignedTo, status, dueDate } = req.body || {};
+  const r = await query(
+    `UPDATE tests SET title_ar=COALESCE($1,title_ar), title_en=COALESCE($1,title_en),
+            desc_ar=COALESCE($2,desc_ar), desc_en=COALESCE($2,desc_en),
+            assigned_to=COALESCE($3,assigned_to), status=COALESCE($4,status),
+            due_date=COALESCE($5,due_date)
+      WHERE id=$6 AND firm_id=$7 RETURNING id`,
+    [title || null, desc || null, assignedTo || null, status || null, dueDate || null,
+     req.params.id, req.user.fid]);
+  if (!r.rowCount) return res.status(404).json({ error: 'not_found' });
+  res.json({ ok: true });
+}));
+
 // ================================================================= RESULTS
 app.post('/api/results', auth, wrap(async (req, res) => {
-  const { responseId, title, desc, status, testedBy } = req.body || {};
-  if (!responseId || !title) return res.status(400).json({ error: 'missing_fields' });
+  const { testId, title, desc, status, testedBy } = req.body || {};
+  if (!testId || !title) return res.status(400).json({ error: 'missing_fields' });
   const out = await tx(async (c) => {
     const code = 'OC-' + await nextCode(c, 'results', '', req.user.fid);
     const r = await c.query(
-      `INSERT INTO results (firm_id,response_id,code,title_ar,title_en,desc_ar,desc_en,
+      `INSERT INTO results (firm_id,test_id,code,title_ar,title_en,desc_ar,desc_en,
                              status,tested_by,created_by,tested_at)
        VALUES ($1,$2,$3,$4,$4,$5,$5,$6,$7,$8,now()) RETURNING id,code,created_at`,
-      [req.user.fid, responseId, code, title, desc || title, status || 'effective',
+      [req.user.fid, testId, code, title, desc || title, status || 'effective',
        testedBy || req.user.uid, req.user.uid]);
     await c.query(
       `INSERT INTO activity_log (firm_id,user_id,action,item_kind,item_id,new_value)
@@ -456,7 +534,7 @@ app.patch('/api/results/:id', auth, wrap(async (req, res) => {
 }));
 
 // ================================================================= CHAT
-const KIND_MAP = { objective: 'objective', risk: 'risk', response: 'response', result: 'result' };
+const KIND_MAP = { objective: 'objective', risk: 'risk', response: 'response', test: 'test', result: 'result' };
 
 app.get('/api/chat', auth, wrap(async (req, res) => {
   const r = await query(
@@ -544,7 +622,7 @@ app.get('/api/chat/unread', auth, wrap(async (req, res) => {
 // بدل UUID الخام حتى تُستورد بأمان في أي قاعدة بيانات أخرى لنفس النظام.
 app.get('/api/export', auth, requireAdmin, wrap(async (req, res) => {
   const fid = req.user.fid;
-  const [firm, users, comps, objs, risks, resps, results] = await Promise.all([
+  const [firm, users, comps, objs, risks, resps, tests, results] = await Promise.all([
     query('SELECT * FROM firms WHERE id=$1', [fid]),
     query(`SELECT username, full_name_ar, full_name_en, email, role, job_title_ar, job_title_en, is_active
              FROM users WHERE firm_id=$1`, [fid]),
@@ -561,20 +639,24 @@ app.get('/api/export', auth, requireAdmin, wrap(async (req, res) => {
                   p.resp_type, p.status, au.username AS assigned_username, p.due_date
              FROM responses p JOIN risks k ON k.id=p.risk_id
              LEFT JOIN users au ON au.id=p.assigned_to WHERE p.firm_id=$1`, [fid]),
-    query(`SELECT x.code, p.code AS response_code, x.title_ar, x.title_en, x.desc_ar, x.desc_en,
+    query(`SELECT tt.code, p.code AS response_code, tt.title_ar, tt.title_en, tt.desc_ar, tt.desc_en,
+                  tt.status, au.username AS assigned_username, tt.due_date
+             FROM tests tt JOIN responses p ON p.id=tt.response_id
+             LEFT JOIN users au ON au.id=tt.assigned_to WHERE tt.firm_id=$1`, [fid]),
+    query(`SELECT x.code, tt.code AS test_code, x.title_ar, x.title_en, x.desc_ar, x.desc_en,
                   x.status, tu.username AS tested_username, x.tested_at
-             FROM results x JOIN responses p ON p.id=x.response_id
+             FROM results x JOIN tests tt ON tt.id=x.test_id
              LEFT JOIN users tu ON tu.id=x.tested_by WHERE x.firm_id=$1`, [fid])
   ]);
   res.setHeader('Content-Disposition', `attachment; filename="isqm-backup-${dpart(new Date())}.json"`);
   res.json({
-    meta: { exportedAt: new Date().toISOString(), firmCode: firm.rows[0]?.firm_code, version: 1 },
+    meta: { exportedAt: new Date().toISOString(), firmCode: firm.rows[0]?.firm_code, version: 2 },
     firm: firm.rows[0], users: users.rows, components: comps.rows,
-    objectives: objs.rows, risks: risks.rows, responses: resps.rows, results: results.rows
+    objectives: objs.rows, risks: risks.rows, responses: resps.rows, tests: tests.rows, results: results.rows
   });
 }));
 
-// استيراد: يستبدل شجرة الجودة الكاملة (مكوّنات→أهداف→مخاطر→استجابات→نتائج) لنفس
+// استيراد: يستبدل شجرة الجودة الكاملة (مكوّنات→أهداف→مخاطر→استجابات→اختبارات→نتائج) لنفس
 // الشركة المسجَّل بها المستخدم الحالي فقط. لا يمسّ المستخدمين ولا هوية الشركة نفسها
 // حتى لا يفقد أحد صلاحية الدخول بسبب استيراد خاطئ.
 app.post('/api/import', auth, requireAdmin, wrap(async (req, res) => {
@@ -597,7 +679,7 @@ app.post('/api/import', auth, requireAdmin, wrap(async (req, res) => {
       cMap[r.rows[0].slug] = r.rows[0].id;
     }
 
-    // حذف الشجرة القديمة (أهداف→مخاطر→استجابات→نتائج) ثم إعادة بنائها من الملف المستورد
+    // حذف الشجرة القديمة (أهداف→مخاطر→استجابات→اختبارات→نتائج) ثم إعادة بنائها من الملف المستورد
     await c.query('DELETE FROM objectives WHERE firm_id=$1', [fid]);
 
     const oMap = {};
@@ -642,22 +724,36 @@ app.post('/api/import', auth, requireAdmin, wrap(async (req, res) => {
       pMap[r.rows[0].code] = r.rows[0].id;
     }
 
+    const tMap = {};
+    for (const tt of (data.tests || [])) {
+      const respId = pMap[tt.response_code];
+      if (!respId) continue;
+      const r = await c.query(
+        `INSERT INTO tests (firm_id,response_id,code,title_ar,title_en,desc_ar,desc_en,status,
+                             assigned_to,created_by,due_date)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id, code`,
+        [fid, respId, tt.code, tt.title_ar, tt.title_en || tt.title_ar, tt.desc_ar || tt.title_ar, tt.desc_en || null,
+         tt.status || 'planned', uMap[tt.assigned_username] || req.user.uid, req.user.uid, tt.due_date || null]);
+      tMap[r.rows[0].code] = r.rows[0].id;
+    }
+
     let resultCount = 0;
     for (const x of (data.results || [])) {
-      const respId = pMap[x.response_code];
-      if (!respId) continue;
+      const testId = tMap[x.test_code];
+      if (!testId) continue;
       await c.query(
-        `INSERT INTO results (firm_id,response_id,code,title_ar,title_en,desc_ar,desc_en,status,
+        `INSERT INTO results (firm_id,test_id,code,title_ar,title_en,desc_ar,desc_en,status,
                                tested_by,created_by,tested_at)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,COALESCE($11,now()))`,
-        [fid, respId, x.code, x.title_ar, x.title_en || x.title_ar, x.desc_ar || x.title_ar, x.desc_en || null,
+        [fid, testId, x.code, x.title_ar, x.title_en || x.title_ar, x.desc_ar || x.title_ar, x.desc_en || null,
          x.status || 'effective', uMap[x.tested_username] || null, req.user.uid, x.tested_at || null]);
       resultCount++;
     }
 
     return {
       components: Object.keys(cMap).length, objectives: Object.keys(oMap).length,
-      risks: Object.keys(rMap).length, responses: Object.keys(pMap).length, results: resultCount
+      risks: Object.keys(rMap).length, responses: Object.keys(pMap).length,
+      tests: Object.keys(tMap).length, results: resultCount
     };
   });
 

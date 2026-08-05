@@ -4,6 +4,16 @@
 --  Encoding: UTF-8   |   All text columns support Arabic + English
 -- =====================================================================
 
+-- تنظيف أي بقايا جداول/أنواع (types) من تشغيل سابق — يجعل هذا الملف آمناً
+-- للتشغيل من الصفر في أي وقت دون الحاجة لملف حذف منفصل قبله.
+DROP VIEW  IF EXISTS v_unread_by_item, v_unread_by_component, v_component_stats CASCADE;
+DROP TABLE IF EXISTS activity_log, chat_reads, chat_messages, attachments,
+                     results, tests, responses, risks, objectives, components, users, firms,
+                     registration_attempts CASCADE;
+DROP TYPE  IF EXISTS severity_level, risk_status, response_status, response_type,
+                     result_status, test_status, user_role, item_kind CASCADE;
+DROP FUNCTION IF EXISTS set_updated_at CASCADE;
+
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";   -- gen_random_uuid()
@@ -16,8 +26,9 @@ CREATE TYPE risk_status      AS ENUM ('open','monitored','closed');
 CREATE TYPE response_status  AS ENUM ('inprog','done','late');
 CREATE TYPE response_type    AS ENUM ('prev','det','mon');      -- وقائية / كاشفة / رقابية
 CREATE TYPE result_status    AS ENUM ('effective','partial','ineffective');
+CREATE TYPE test_status      AS ENUM ('planned','inprogress','completed');
 CREATE TYPE user_role        AS ENUM ('owner','admin','quality_lead','manager','staff','viewer');
-CREATE TYPE item_kind        AS ENUM ('component','objective','risk','response','result');
+CREATE TYPE item_kind        AS ENUM ('component','objective','risk','response','test','result');
 
 -- ---------------------------------------------------------------------
 -- 1. FIRMS  (الشركات / المكاتب)  — multi-tenant root
@@ -173,12 +184,35 @@ CREATE INDEX idx_responses_risk   ON responses(risk_id);
 CREATE INDEX idx_responses_status ON responses(firm_id, status);
 
 -- ---------------------------------------------------------------------
--- 7. RESULTS  (نتائج / اختبارات فاعلية الاستجابة)
+-- 6.5 TESTS  (اختبارات فاعلية الإجراء — بين الاستجابة والنتيجة)
+-- ---------------------------------------------------------------------
+CREATE TABLE tests (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    firm_id       UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+    response_id   UUID NOT NULL REFERENCES responses(id) ON DELETE CASCADE,
+    code          VARCHAR(20) NOT NULL,          -- TS-01
+    title_ar      VARCHAR(300) NOT NULL,
+    title_en      VARCHAR(300),
+    desc_ar       TEXT NOT NULL,
+    desc_en       TEXT,
+    status        test_status NOT NULL DEFAULT 'planned',
+    assigned_to   UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_by    UUID REFERENCES users(id) ON DELETE SET NULL,
+    due_date      DATE,
+    sort_order    INTEGER DEFAULT 0,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (firm_id, code)
+);
+CREATE INDEX idx_tests_response ON tests(response_id);
+
+-- ---------------------------------------------------------------------
+-- 7. RESULTS  (نتائج تنفيذ الاختبار)
 -- ---------------------------------------------------------------------
 CREATE TABLE results (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     firm_id       UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
-    response_id   UUID NOT NULL REFERENCES responses(id) ON DELETE CASCADE,
+    test_id       UUID NOT NULL REFERENCES tests(id) ON DELETE CASCADE,
     code          VARCHAR(20) NOT NULL,          -- OC-01
     title_ar      VARCHAR(300) NOT NULL,
     title_en      VARCHAR(300),
@@ -192,7 +226,7 @@ CREATE TABLE results (
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (firm_id, code)
 );
-CREATE INDEX idx_results_response ON results(response_id);
+CREATE INDEX idx_results_test ON results(test_id);
 
 -- ---------------------------------------------------------------------
 -- 7.5 REGISTRATION ATTEMPTS  (منع تكرار إنشاء الحساب عند تعدد النقر/إعادة الإرسال)
@@ -319,12 +353,14 @@ SELECT c.id AS component_id, c.firm_id, c.slug, c.seq, c.name_ar, c.name_en,
        COUNT(DISTINCT p.id)                                              AS responses_count,
        COUNT(DISTINCT p.id) FILTER (WHERE p.status = 'late')             AS responses_late,
        COUNT(DISTINCT p.id) FILTER (WHERE p.status = 'done')             AS responses_done,
+       COUNT(DISTINCT t.id)                                              AS tests_count,
        COUNT(DISTINCT x.id)                                              AS results_count
 FROM       components c
 LEFT JOIN  objectives o ON o.component_id = c.id
 LEFT JOIN  risks      k ON k.objective_id = o.id
 LEFT JOIN  responses  p ON p.risk_id      = k.id
-LEFT JOIN  results    x ON x.response_id  = p.id
+LEFT JOIN  tests      t ON t.response_id  = p.id
+LEFT JOIN  results    x ON x.test_id      = t.id
 GROUP BY   c.id;
 
 -- =====================================================================
@@ -336,7 +372,7 @@ BEGIN NEW.updated_at = now(); RETURN NEW; END; $$ LANGUAGE plpgsql;
 DO $$
 DECLARE tbl TEXT;
 BEGIN
-  FOREACH tbl IN ARRAY ARRAY['firms','users','objectives','risks','responses','results'] LOOP
+  FOREACH tbl IN ARRAY ARRAY['firms','users','objectives','risks','responses','tests','results'] LOOP
     EXECUTE format('CREATE TRIGGER trg_%1$s_updated BEFORE UPDATE ON %1$s
                     FOR EACH ROW EXECUTE FUNCTION set_updated_at();', tbl);
   END LOOP;

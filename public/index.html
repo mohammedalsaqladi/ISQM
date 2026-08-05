@@ -52,11 +52,14 @@ button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}
 #app{display:none}
 .shell{display:grid;grid-template-columns:auto 1fr;min-height:100vh}
 .sidebar{order:-1;background:var(--ink);color:#C8D8DA;position:sticky;top:0;height:100vh;display:flex;flex-direction:row}
-body[dir="rtl"] .sidebar{flex-direction:row-reverse}
 .sbmain{width:206px;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
 .sbcomp{width:194px;height:100vh;overflow-y:auto;background:#0C1A23;border-left:1px solid var(--ink-2);border-right:1px solid var(--ink-2);display:none}
 .sbcomp.show{display:block}
-.comp-h{padding:13px 12px 6px;font-size:9.5px;color:#6E888D;letter-spacing:.8px}
+.comp-h{padding:13px 12px 6px;font-size:9.5px;color:#6E888D;letter-spacing:.8px;display:flex;align-items:center;justify-content:space-between}
+.cadd{cursor:pointer;color:#8FA7AC;font-size:13px;font-weight:700;padding:0 4px}
+.cadd:hover{color:#fff}
+.cedit{cursor:pointer;color:#5C7379;font-size:10px;padding:0 3px;opacity:.7}
+.cedit:hover{opacity:1;color:#fff}
 .comp-item{display:flex;align-items:flex-start;gap:7px;padding:7px 10px;margin:2px 7px;border-radius:6px;font-size:11.6px;line-height:1.35;color:#C8D8DA;cursor:pointer}
 .comp-item:hover{background:#17303D;color:#fff}
 .comp-item.active{background:var(--teal);color:#fff}
@@ -246,6 +249,7 @@ tr:last-child td{border-bottom:0}
 </style>
 </head>
 <body dir="rtl">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <div id="login">
   <div class="login-art">
@@ -269,6 +273,7 @@ tr:last-child td{border-bottom:0}
   </div>
   <div class="login-card" id="signup-card" style="display:none">
     <h2 id="su-h2"></h2><p class="sub" id="su-sub"></p>
+    <div class="field"><label id="su-lb-code"></label><input id="su-code" autocomplete="off"></div>
     <div class="field"><label id="su-lb-firm"></label><input id="su-firm"></div>
     <div class="field"><label id="su-lb-cr"></label><input id="su-cr"></div>
     <div class="field"><label id="su-lb-city"></label><input id="su-city"></div>
@@ -317,21 +322,32 @@ kObjectives:"الأهداف",kRisks:"المخاطر",kResponses:"الاستجا�
 kObjF:"على 8 مكونات",kRiskF:"مقيّمة ومصنّفة",kRespF:"مصممة ومنفّذة",kResF:"موثّقة",kOverF:"تحتاج متابعة",
 byComponent:"المخاطر حسب المكوّن",severityMix:"توزيع الخطورة",respStatus:"حالة الاستجابات",recent:"آخر التحديثات",
 high:"عالي",medium:"متوسط",low:"منخفض",done:"منفّذة",inprog:"قيد التنفيذ",late:"متأخرة",
-objectives:"الأهداف",risks:"المخاطر",responses:"الاستجابات",results:"النتائج",
+objectives:"الأهداف",risks:"المخاطر",responses:"الاستجابات",tests:"الاختبارات",results:"النتائج",
 searchPh:"بحث في الشجرة...",pickTitle:"اختر عنصراً من الشجرة",pickSub:"التفاصيل تظهر هنا.",
 riskLevel:"درجة الخطورة",owner:"موجهة إلى",createdBy:"أنشأها",date:"التاريخ",time:"الوقت",status:"الحالة",ref:"المرجع",
 addResponse:"إضافة استجابة",cancel:"إلغاء",save:"حفظ",respText:"وصف الاستجابة",respTitle:"عنوان الاستجابة",assignTo:"موجهة إلى",respType:"النوع",
-noResp:"لا توجد استجابات بعد.",noRes:"لا توجد نتائج مسجلة.",
-objective:"هدف",risk:"خطر",response:"استجابة",result:"نتيجة",
+noResp:"لا توجد استجابات بعد.",noRes:"لا توجد نتائج مسجلة.",noTest:"لا توجد اختبارات بعد.",
+objective:"هدف",risk:"خطر",response:"استجابة",test:"اختبار",result:"نتيجة",
+addTest:"إضافة اختبار",addResult:"إضافة نتيجة",testTitle:"عنوان الاختبار",testText:"وصف الاختبار",resultTitle:"عنوان النتيجة",resultText:"وصف النتيجة",
+planned:"مخطط",testInprogress:"قيد التنفيذ",completed:"مكتمل",ineffective:"غير فعّالة",
+downloadTemplate:"⭳ قالب الاستيراد",addComponent:"مكوّن جديد",edit:"تعديل",
+newComponentNamePrompt:"اسم المكوّن الجديد (عربي):",newComponentSlugPrompt:"معرّف مختصر للمكوّن (إنجليزي، بدون مسافات):",editComponentNamePrompt:"الاسم الجديد للمكوّن:",
 compStats:"إحصائيات المكوّن",description:"الوصف",
 companyTitle:"بيانات الشركة",companySub:"المعلومات النظامية والمهنية للمكتب.",usersTitle:"المستخدمون",usersSub:"مستخدمو النظام وصلاحياتهم.",profileTitle:"ملفي الشخصي",profileSub:"بياناتك في النظام.",
 name:"الاسم",role:"الدور",email:"البريد",lastLogin:"آخر دخول",active:"نشط",inactive:"موقوف",
 firmName:"اسم المكتب",license:"رقم الترخيص",cr:"السجل التجاري",city:"المدينة",country:"الدولة",phone:"الهاتف",partners:"الشركاء",staff:"الموظفون",engagements:"الارتباطات",scope:"النطاق",period:"فترة النظام",respScope:"المسؤول النهائي",opRespScope:"المسؤول التشغيلي",
 printedAt:"تاريخ الطباعة",assignedToMe:"موكلة إليّ",type_prev:"وقائية",type_det:"كاشفة",type_mon:"رقابية",
 open:"مفتوح",closed:"مغلق",monitored:"تحت المراقبة",effective:"فعّالة",partial:"فعّالة جزئياً",expand:"توسيع الكل",collapse:"طي الكل",components:"المكوّنات",allComp:"جميع المكوّنات",chat:"الدردشة",details:"التفاصيل",sendPh:"اكتب رسالة...",send:"إرسال",linkedTo:"مرتبطة بـ",changeLink:"تعديل الربط",allItems:"جميع العناصر",generalChat:"دردشة عامة على المكوّن",chatSub:"دردشة الفريق مرتبطة ببنود نظام الجودة.",noMsgs:"لا توجد رسائل بعد — ابدأ المحادثة.",unreadSep:"رسائل غير مقروءة",unread:"غير مقروءة",scope:"نطاق الدردشة",apply:"تطبيق",signup:"إنشاء حساب شركة جديدة",backLogin:"العودة لتسجيل الدخول",newAccount:"حساب شركة جديدة",newAccountSub:"سجّل مكتبك للبدء في نظام إدارة الجودة.",adminName:"اسم المسؤول",createAcc:"إنشاء الحساب",accCreated:"تم إنشاء الحساب بنجاح — كود الشركة:",reqFields:"الرجاء تعبئة الحقول المطلوبة.",confirmPass:"تأكيد كلمة المرور",passMismatch:"كلمتا المرور غير متطابقتين.",
+chooseFirmCode:"كود الشركة (تختاره أنت لتسجيل الدخول لاحقاً)",codeFormat:"كود الشركة يجب أن يكون 3-20 حرف/رقم إنجليزي فقط (بدون مسافات).",codeTaken:"هذا الكود مستخدم مسبقاً، اختر كوداً آخر.",
 exportData:"⭳ تصدير نسخة احتياطية",importData:"⭱ استيراد نسخة احتياطية",
 importConfirm:"سيستبدل الاستيراد كامل الأهداف والمخاطر والاستجابات والنتائج الحالية بمحتوى الملف. هل تريد المتابعة؟",
-importedOk:"تم الاستيراد بنجاح.",importFailed:"فشل الاستيراد"},
+importedOk:"تم الاستيراد بنجاح.",importFailed:"فشل الاستيراد",xlsxLoadError:"تعذّر تحميل مكتبة قراءة الإكسل — تحقق من الاتصال بالإنترنت وحاول مجدداً.",
+tplInstructionsSheet:"تعليمات",tplRefSheet:"مرجع",
+tplInstrTitle:"قالب استيراد بيانات نظام ISQM 1",
+tplInstr1:"صفحة 'مرجع' تعرض الأكواد/المعرّفات الموجودة حالياً بالنظام (مكوّنات، أهداف، مخاطر، إجراءات، اختبارات، مستخدمين) — استخدمها كما هي بأعمدة الربط.",
+tplInstr2:"لإضافة عنصر جديد بالكامل: اكتب له كوداً جديداً غير مكرر بعمود code في صفحته، ثم استخدم نفس الكود بعمود الربط بالصفحة التالية (مثال: كود هدف جديد بصفحة الأهداف يُستخدم كـ objective_code بصفحة المخاطر).",
+tplInstr3:"أعمدة الربط بين الصفحات: component_slug (بالأهداف) ← objective_code (بالمخاطر) ← risk_code (بالإجراءات) ← response_code (بالاختبارات) ← test_code (بالنتائج).",
+tplInstr4:"بعد التعبئة احفظ الملف وارفعه من زر 'استيراد نسخة احتياطية'. تنبيه: الاستيراد يستبدل كامل شجرة الأهداف↓النتائج الحالية بمحتوى الملف، ولا يمسّ المستخدمين ولا بيانات الشركة.",},
 en:{dir:"ltr",other:"عربي",login:"Sign in",loginSub:"Enter your credentials to access the system.",code:"Firm code",user:"Username",pass:"Password",enter:"Sign in",err:"Incorrect sign-in details.",hint:"Demo — Code: ISQM-001 · User: admin · Password: 123456",
 heroH:"Quality Management System<br>under ISQM 1",heroP:"Objectives, risks, responses and results across the eight components, with engagement quality reviews.",demoFoot:"Preview build — sample data",
 firm:"Riyadh Certified Public Accountants",home:"Dashboard",company:"Firm profile",users:"Users",profile:"My profile",quality:"Quality management",print:"Print",logout:"Sign out",loggedAs:"Signed in",main:"Main menu",component:"Component",
@@ -340,21 +356,32 @@ kObjectives:"Objectives",kRisks:"Risks",kResponses:"Responses",kResults:"Results
 kObjF:"across 8 components",kRiskF:"assessed and rated",kRespF:"designed and implemented",kResF:"documented",kOverF:"need follow-up",
 byComponent:"Risks by component",severityMix:"Severity mix",respStatus:"Response status",recent:"Latest updates",
 high:"High",medium:"Medium",low:"Low",done:"Implemented",inprog:"In progress",late:"Overdue",
-objectives:"Objectives",risks:"Risks",responses:"Responses",results:"Results",
+objectives:"Objectives",risks:"Risks",responses:"Responses",tests:"Tests",results:"Results",
 searchPh:"Search the tree...",pickTitle:"Select an item from the tree",pickSub:"Details appear here.",
 riskLevel:"Risk level",owner:"Assigned to",createdBy:"Created by",date:"Date",time:"Time",status:"Status",ref:"Reference",
 addResponse:"Add response",cancel:"Cancel",save:"Save",respText:"Response description",respTitle:"Response title",assignTo:"Assign to",respType:"Type",
-noResp:"No responses yet.",noRes:"No results recorded.",
-objective:"Objective",risk:"Risk",response:"Response",result:"Result",
+noResp:"No responses yet.",noRes:"No results recorded.",noTest:"No tests yet.",
+objective:"Objective",risk:"Risk",response:"Response",test:"Test",result:"Result",
+addTest:"Add test",addResult:"Add result",testTitle:"Test title",testText:"Test description",resultTitle:"Result title",resultText:"Result description",
+planned:"Planned",testInprogress:"In progress",completed:"Completed",ineffective:"Ineffective",
+downloadTemplate:"⭳ Import template",addComponent:"New component",edit:"Edit",
+newComponentNamePrompt:"New component name (Arabic):",newComponentSlugPrompt:"Short component slug (English, no spaces):",editComponentNamePrompt:"New name for the component:",
 compStats:"Component statistics",description:"Description",
 companyTitle:"Firm profile",companySub:"Statutory and professional details.",usersTitle:"Users",usersSub:"System users and permissions.",profileTitle:"My profile",profileSub:"Your details in the system.",
 name:"Name",role:"Role",email:"Email",lastLogin:"Last sign-in",active:"Active",inactive:"Suspended",
 firmName:"Firm name",license:"License no.",cr:"CR number",city:"City",country:"Country",phone:"Phone",partners:"Partners",staff:"Staff",engagements:"Engagements",scope:"Scope",period:"System period",respScope:"Ultimate responsibility",opRespScope:"Operational responsibility",
 printedAt:"Printed on",assignedToMe:"Assigned to me",type_prev:"Preventive",type_det:"Detective",type_mon:"Monitoring",
 open:"Open",closed:"Closed",monitored:"Monitored",effective:"Effective",partial:"Partly effective",expand:"Expand all",collapse:"Collapse all",components:"Components",allComp:"All components",chat:"Chat",details:"Details",sendPh:"Type a message...",send:"Send",linkedTo:"Linked to",changeLink:"Change link",allItems:"All items",generalChat:"General component chat",chatSub:"Team chat linked to quality system items.",noMsgs:"No messages yet — start the conversation.",unreadSep:"Unread messages",unread:"Unread",scope:"Chat scope",apply:"Apply",signup:"Create a new firm account",backLogin:"Back to sign in",newAccount:"New firm account",newAccountSub:"Register your firm to start using the system.",adminName:"Administrator name",createAcc:"Create account",accCreated:"Account created — firm code:",reqFields:"Please fill in the required fields.",confirmPass:"Confirm password",passMismatch:"Passwords do not match.",
+chooseFirmCode:"Firm code (you choose it, used to sign in later)",codeFormat:"Firm code must be 3-20 English letters/digits only (no spaces).",codeTaken:"This code is already taken, choose another one.",
 exportData:"⭳ Export backup",importData:"⭱ Import backup",
 importConfirm:"Importing will replace all current objectives, risks, responses and results with the file's content. Continue?",
-importedOk:"Import completed successfully.",importFailed:"Import failed"}
+importedOk:"Import completed successfully.",importFailed:"Import failed",xlsxLoadError:"Could not load the Excel reading library — check your internet connection and try again.",
+tplInstructionsSheet:"Instructions",tplRefSheet:"Reference",
+tplInstrTitle:"ISQM 1 data import template",
+tplInstr1:"The 'Reference' sheet lists codes/identifiers that already exist in the system (components, objectives, risks, responses, tests, users) — use them as-is in linking columns.",
+tplInstr2:"To add a brand-new item: give it a new unique code in the 'code' column on its sheet, then use that same code as the linking column on the next sheet (e.g. a new objective code on the Objectives sheet becomes objective_code on the Risks sheet).",
+tplInstr3:"Linking columns between sheets: component_slug (Objectives) ← objective_code (Risks) ← risk_code (Responses) ← response_code (Tests) ← test_code (Results).",
+tplInstr4:"After filling it in, save the file and upload it via 'Import backup'. Note: importing replaces the entire current objectives↓results tree with the file's content; it does not touch users or firm data.",}
 };
 let lang="ar";const t=k=>T[lang][k];const L=o=>(o&&o[lang])||"";
 
@@ -390,13 +417,59 @@ async function doExport(){
   document.body.appendChild(a);a.click();a.remove();
   URL.revokeObjectURL(url);
  }catch(e){alert(e.message);}}
+
+const TEMPLATE_SHEETS={
+ "المكونات":["slug","seq","name_ar","name_en","desc_ar","desc_en"],
+ "الأهداف":["code","component_slug","standard_ref","title_ar","title_en","desc_ar","desc_en","is_additional","owner_username"],
+ "المخاطر":["code","objective_code","title_ar","title_en","desc_ar","desc_en","severity","likelihood","impact","status","owner_username","due_date"],
+ "الإجراءات":["code","risk_code","title_ar","title_en","desc_ar","desc_en","resp_type","status","assigned_username","due_date"],
+ "الاختبارات":["code","response_code","title_ar","title_en","desc_ar","desc_en","status","assigned_username","due_date"],
+ "النتائج":["code","test_code","title_ar","title_en","desc_ar","desc_en","status","tested_username","tested_at"]
+};
+const SHEET_TO_KEY={"المكونات":"components","الأهداف":"objectives","المخاطر":"risks","الإجراءات":"responses","الاختبارات":"tests","النتائج":"results"};
+
+function downloadTemplate(){
+ if(typeof XLSX==="undefined"){alert(t("xlsxLoadError"));return;}
+ const wb=XLSX.utils.book_new();
+ const instr=[[t("tplInstrTitle")],[""],[t("tplInstr1")],[""],[t("tplInstr2")],[""],[t("tplInstr3")],[""],[t("tplInstr4")]];
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(instr),t("tplInstructionsSheet"));
+ const refRows=[["type","code_or_slug","title"]];
+ DATA.forEach(c=>refRows.push(["component",c.id,L(c)]));
+ DATA.forEach(c=>walk(c,n=>refRows.push([kx(n),n.code,L(n.t)])));
+ refRows.push(["",""," "]);
+ USERS.forEach(u=>refRows.push(["username",u.username,L(u.name)]));
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(refRows),t("tplRefSheet"));
+ Object.entries(TEMPLATE_SHEETS).forEach(([name,cols])=>{
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([cols]),name);
+ });
+ XLSX.writeFile(wb,"isqm-import-template.xlsx");}
+
+async function doImportExcel(file){
+ const buf=await file.arrayBuffer();
+ const wb=XLSX.read(buf,{type:"array"});
+ const data={components:[],objectives:[],risks:[],responses:[],tests:[],results:[]};
+ Object.entries(SHEET_TO_KEY).forEach(([sheetName,key])=>{
+  const ws=wb.Sheets[sheetName];if(!ws)return;
+  const rows=XLSX.utils.sheet_to_json(ws,{defval:null});
+  data[key]=rows.filter(r=>Object.values(r).some(v=>v!==null&&String(v).trim()!==""));});
+ data.components.forEach(c=>{c.seq=c.seq?Number(c.seq):null;});
+ data.objectives.forEach(o=>{o.is_additional=["1","true","TRUE","نعم","yes","YES"].includes(String(o.is_additional));});
+ data.risks.forEach(k=>{k.likelihood=k.likelihood?Number(k.likelihood):null;k.impact=k.impact?Number(k.impact):null;});
+ return data;}
+
 function pickImportFile(){const el=document.getElementById("imp-file");if(el)el.click();}
 async function doImport(file){
  if(!file)return;
  if(!confirm(t("importConfirm")))return;
  try{
-  const text=await file.text();
-  const data=JSON.parse(text);
+  const name=file.name.toLowerCase();
+  let data;
+  if(name.endsWith(".xlsx")||name.endsWith(".xls")){
+   if(typeof XLSX==="undefined")throw new Error(t("xlsxLoadError"));
+   data=await doImportExcel(file);
+  }else{
+   data=JSON.parse(await file.text());
+  }
   const r=await api("/import",{method:"POST",body:JSON.stringify({data})});
   await loadAll();render();
   alert(t("importedOk"));
@@ -428,28 +501,33 @@ const initials=p=>(lang==="ar"?p.ar.split(" ").map(w=>w[0]).join(""):p.en.split(
 const sevLabel=s=>s==="high"?t("high"):s==="medium"?t("medium"):t("low");
 const sevClass=s=>s==="high"?"b-h":s==="medium"?"b-m":"b-l";
 const sevColor=s=>s==="high"?"var(--high)":s==="medium"?"var(--med)":"var(--low)";
-const stLabel=s=>({open:t("open"),closed:t("closed"),monitored:t("monitored"),done:t("done"),inprog:t("inprog"),late:t("late"),effective:t("effective"),partial:t("partial")})[s]||s;
-const stClass=s=>({done:"b-l",inprog:"b-t",late:"b-h",open:"b-m",closed:"b-l",monitored:"b-v",effective:"b-l",partial:"b-m"})[s]||"b-n";
+const stLabel=s=>({open:t("open"),closed:t("closed"),monitored:t("monitored"),done:t("done"),inprog:t("inprog"),late:t("late"),effective:t("effective"),partial:t("partial"),ineffective:t("ineffective"),planned:t("planned"),inprogress:t("testInprogress"),completed:t("completed")})[s]||s;
+const stClass=s=>({done:"b-l",inprog:"b-t",late:"b-h",open:"b-m",closed:"b-l",monitored:"b-v",effective:"b-l",partial:"b-m",ineffective:"b-h",planned:"b-n",inprogress:"b-t",completed:"b-l"})[s]||"b-n";
 const typeLabel=ty=>({prev:t("type_prev"),det:t("type_det"),mon:t("type_mon")})[ty]||"";
-const kindLabel=k=>({obj:t("objective"),risk:t("risk"),resp:t("response"),res:t("result")})[K[k]||k];
-const kindColor=n=>kx(n)==="obj"?"var(--teal)":kx(n)==="risk"?sevColor(n.sev):kx(n)==="resp"?"var(--violet)":"#2E7D50";
-const kidsLabel=k=>({obj:t("risks"),risk:t("responses"),resp:t("results")})[K[k]||k];
+const kindLabel=k=>({obj:t("objective"),risk:t("risk"),resp:t("response"),test:t("test"),res:t("result")})[K[k]||k];
+const kindColor=n=>kx(n)==="obj"?"var(--teal)":kx(n)==="risk"?sevColor(n.sev):kx(n)==="resp"?"var(--violet)":kx(n)==="test"?"var(--med)":"#2E7D50";
+const kidsLabel=k=>({obj:t("risks"),risk:t("responses"),resp:t("tests"),test:t("results")})[K[k]||k];
 
-function walk(c,fn){(c.objectives||[]).forEach(ob=>{fn(ob,null);(ob.kids||[]).forEach(rk=>{fn(rk,ob);(rk.kids||[]).forEach(rs=>{fn(rs,rk);(rs.kids||[]).forEach(xx=>fn(xx,rs));});});});}
-function statsOf(c){const st={ob:0,rk:0,rs:0,rx:0,h:0,m:0,l:0,late:0,done:0,inprog:0};
+function walk(c,fn){(c.objectives||[]).forEach(ob=>{fn(ob,null);(ob.kids||[]).forEach(rk=>{fn(rk,ob);(rk.kids||[]).forEach(rs=>{fn(rs,rk);(rs.kids||[]).forEach(ts=>{fn(ts,rs);(ts.kids||[]).forEach(xx=>fn(xx,ts));});});});});}
+function statsOf(c){const st={ob:0,rk:0,rs:0,ts:0,rx:0,h:0,m:0,l:0,late:0,done:0,inprog:0};
  walk(c,n=>{const k2=kx(n);if(k2==="obj")st.ob++;else if(k2==="risk"){st.rk++;st[n.sev==="high"?"h":n.sev==="medium"?"m":"l"]++;}
- else if(k2==="resp"){st.rs++;if(n.status==="late")st.late++;if(n.status==="done")st.done++;if(n.status==="inprog")st.inprog++;}else st.rx++;});return st;}
-function totals(){const s={ob:0,rk:0,rs:0,rx:0,h:0,m:0,l:0,late:0,done:0,inprog:0};DATA.forEach(c=>{const x=statsOf(c);Object.keys(s).forEach(k=>s[k]+=x[k]);});return s;}
+ else if(k2==="resp"){st.rs++;if(n.status==="late")st.late++;if(n.status==="done")st.done++;if(n.status==="inprog")st.inprog++;}else if(k2==="test")st.ts++;else st.rx++;});return st;}
+function totals(){const s={ob:0,rk:0,rs:0,ts:0,rx:0,h:0,m:0,l:0,late:0,done:0,inprog:0};DATA.forEach(c=>{const x=statsOf(c);Object.keys(s).forEach(k=>s[k]+=x[k]);});return s;}
 function findNode(c,code){let f=null;walk(c,n=>{if(n.code===code)f=n;});return f;}
 function parentOf(c,code){let p=null;walk(c,(n,par)=>{if(n.code===code)p=par;});return p;}
 function comps(){return state.comp==="all"?DATA:[DATA.find(c=>c.id===state.comp)||DATA[0]];}
-function statsSum(list){const s={ob:0,rk:0,rs:0,rx:0,h:0,m:0,l:0,late:0,done:0,inprog:0};
+function statsSum(list){const s={ob:0,rk:0,rs:0,ts:0,rx:0,h:0,m:0,l:0,late:0,done:0,inprog:0};
  list.forEach(c=>{const x=statsOf(c);Object.keys(s).forEach(k=>s[k]+=x[k]);});return s;}
 function ownerOf(code){let out=null;comps().forEach(c=>{if(findNode(c,code))out=c;});return out;}
-const K={objective:"obj",risk:"risk",response:"resp",result:"res"};
-const KDB={obj:"objective",risk:"risk",resp:"response",res:"result"};
+const K={objective:"obj",risk:"risk",response:"resp",test:"test",result:"res"};
+const KDB={obj:"objective",risk:"risk",resp:"response",test:"test",res:"result"};
 const kx=n=>K[n.kind]||n.kind;
-const ICON={obj:"◎",risk:"⚠",resp:"➜",res:"✔"};
+const ICON={obj:"◎",risk:"⚠",resp:"➜",test:"▣",res:"✔"};
+const ADD_META={
+ risk:{labelKey:"addResponse",titleKey:"respTitle",textKey:"respText",kind:"resp",endpoint:"/responses",idField:"riskId",statusOpts:["inprog","done","late"]},
+ resp:{labelKey:"addTest",titleKey:"testTitle",textKey:"testText",kind:"test",endpoint:"/tests",idField:"responseId",statusOpts:["planned","inprogress","completed"]},
+ test:{labelKey:"addResult",titleKey:"resultTitle",textKey:"resultText",kind:"res",endpoint:"/results",idField:"testId",statusOpts:["effective","partial","ineffective"]}
+};
 function compById(id){return DATA.find(c=>c.id===id);}
 function subCodes(c,code){const n=findNode(c,code);const out=new Set();if(!n)return out;(function w(x){out.add(x.code);x.kids.forEach(w);})(n);return out;}
 function nodeTitle(compId,code){const c=compById(compId);if(!c)return "";if(!code)return L(c);const n=findNode(c,code);return n?L(n.t):code;}
@@ -490,6 +568,7 @@ function paintLogin(){const g=id=>document.getElementById(id);
  g("lg-err").textContent=t("err");g("lg-hint").textContent=t("hint");g("btn-lang-login").textContent=t("other");
  g("btn-signup").textContent=t("signup");g("btn-back-login").textContent=t("backLogin");
  g("su-h2").textContent=t("newAccount");g("su-sub").textContent=t("newAccountSub");
+ g("su-lb-code").textContent=t("chooseFirmCode");
  g("su-lb-firm").textContent=t("firmName");g("su-lb-cr").textContent=t("cr");g("su-lb-city").textContent=t("city");
  g("su-lb-admin").textContent=t("adminName");g("su-lb-email").textContent=t("email");g("su-lb-user").textContent=t("user");
  g("su-lb-pass").textContent=t("pass");g("su-lb-pass2").textContent=t("confirmPass");g("btn-create").textContent=t("createAcc");
@@ -517,14 +596,38 @@ function buildNav(){
  panel.classList.toggle("show",state.page==="quality");
  if(state.page!=="quality"){panel.innerHTML="";return;}
  const tt=totals();
- let p=`<div class="comp-h">${t("components")}</div>`;
+ const canManage=MY_ROLE==="owner"||MY_ROLE==="admin";
+ let p=`<div class="comp-h">${t("components")}${canManage?`<span class="cadd" id="btn-add-comp" title="${t("addComponent")}">+</span>`:""}</div>`;
  p+=`<div class="comp-item ${state.comp==="all"?"active":""}" data-comp="all"><span class="ci mono">★</span><span>${t("allComp")}</span>${unreadTotal()?`<span class="ubadge num" style="margin-inline-start:auto">${unreadTotal()}</span>`:`<span class="cn num">${tt.rk}</span>`}</div>`;
  p+=DATA.map(c=>{const st=statsOf(c);
-   return `<div class="comp-item ${state.comp===c.id?"active":""}" data-comp="${c.id}"><span class="ci mono">${c.num}</span><span>${esc(L(c))}</span>${unreadIn(c.id,null)?`<span class="ubadge num" style="margin-inline-start:auto">${unreadIn(c.id,null)}</span>`:`<span class="cn num">${st.rk}</span>`}</div>`;}).join("");
+   return `<div class="comp-item ${state.comp===c.id?"active":""}" data-comp="${c.id}"><span class="ci mono">${c.num}</span><span style="flex:1">${esc(L(c))}</span>${canManage?`<span class="cedit" data-edit-comp="${c.dbId}" data-name="${esc(L(c))}" title="${t("edit")}">✎</span>`:""}${unreadIn(c.id,null)?`<span class="ubadge num" style="margin-inline-start:auto">${unreadIn(c.id,null)}</span>`:`<span class="cn num">${st.rk}</span>`}</div>`;}).join("");
  panel.innerHTML=p;
  panel.querySelectorAll("[data-comp]").forEach(el=>el.onclick=()=>{
    state.comp=el.dataset.comp;state.sel=null;state.q="";state.adding=false;
-   state.open=new Set();comps().forEach(c=>c.objectives.forEach(o=>state.open.add(o.code)));render();});}
+   state.open=new Set();comps().forEach(c=>c.objectives.forEach(o=>state.open.add(o.code)));render();});
+ panel.querySelectorAll("[data-edit-comp]").forEach(el=>el.onclick=(e)=>{
+   e.stopPropagation();editComponentPrompt(el.dataset.editComp,el.dataset.name);});
+ const addC=document.getElementById("btn-add-comp");
+ if(addC)addC.onclick=(e)=>{e.stopPropagation();addComponentPrompt();};}
+
+async function addComponentPrompt(){
+ const nameAr=prompt(t("newComponentNamePrompt"));
+ if(!nameAr||!nameAr.trim())return;
+ let slug=prompt(t("newComponentSlugPrompt"),nameAr.trim().replace(/[^a-zA-Z0-9]+/g,"-").toLowerCase().replace(/^-+|-+$/g,"").slice(0,20)||"comp");
+ if(!slug||!slug.trim())return;
+ slug=slug.trim().toLowerCase();
+ try{
+  await api("/components",{method:"POST",body:JSON.stringify({slug,nameAr:nameAr.trim()})});
+  await loadAll();buildNav();render();
+ }catch(e){alert(e.message);}}
+
+async function editComponentPrompt(dbId,curName){
+ const nameAr=prompt(t("editComponentNamePrompt"),curName);
+ if(!nameAr||!nameAr.trim()||nameAr.trim()===curName)return;
+ try{
+  await api("/components/"+dbId,{method:"PATCH",body:JSON.stringify({nameAr:nameAr.trim()})});
+  await loadAll();buildNav();render();
+ }catch(e){alert(e.message);}}
 
 /* ---------------- views ---------------- */
 function printHead(title){const n=new Date();
@@ -593,14 +696,20 @@ function viewQuality(){
    if(!inner)return "";
    return (all?`<div class="tgrp"><span class="mono" style="color:var(--muted)">${c.num}</span> ${esc(L(c))}</div>`:"")+inner;
  }).join("")||`<div class="tempty">—</div>`;
- const legend=`<div class="tlegend"><span style="color:var(--teal)"><b>◎</b> ${t("objectives")}</span><span style="color:var(--high)"><b>⚠</b> ${t("risks")}</span><span style="color:var(--violet)"><b>➜</b> ${t("responses")}</span><span style="color:var(--low)"><b>✔</b> ${t("results")}</span></div>`;
+ const legend=`<div class="tlegend"><span style="color:var(--teal)"><b>◎</b> ${t("objectives")}</span><span style="color:var(--high)"><b>⚠</b> ${t("risks")}</span><span style="color:var(--violet)"><b>➜</b> ${t("responses")}</span><span style="color:var(--med)"><b>▣</b> ${t("tests")}</span><span style="color:var(--low)"><b>✔</b> ${t("results")}</span></div>`;
+ const canManage=MY_ROLE==="owner"||MY_ROLE==="admin";
+ const backupBtns=canManage?`<button class="btn ghost xs" onclick="downloadTemplate()">${t("downloadTemplate")}</button>
+  <button class="btn ghost xs" onclick="doExport()">${t("exportData")}</button>
+  <button class="btn ghost xs" onclick="pickImportFile()">${t("importData")}</button>
+  <input type="file" id="imp-file" accept=".json,.xlsx,.xls" style="display:none" onchange="doImport(this.files[0]);this.value='';">`:"";
  return printHead(title)+`
  <div class="page-head"><div><h2>${all?"":`<span class="mono" style="color:var(--muted);font-size:12px">${list[0].num}</span> `}${esc(title)}</h2><p>${t("compStats")}</p></div>
- <div class="side no-print"><button class="btn ghost xs" id="btn-exp">${t("expand")}</button><button class="btn ghost xs" id="btn-col">${t("collapse")}</button><button class="btn ghost xs" onclick="window.print()">${t("print")}</button></div></div>
+ <div class="side no-print">${backupBtns}<button class="btn ghost xs" id="btn-exp">${t("expand")}</button><button class="btn ghost xs" id="btn-col">${t("collapse")}</button><button class="btn ghost xs" onclick="window.print()">${t("print")}</button></div></div>
  <div class="chips">
   <div class="chip"><div class="k">${t("objectives")}</div><div class="v num">${st.ob}</div></div>
   <div class="chip"><div class="k">${t("risks")}</div><div class="v num">${st.rk}</div></div>
   <div class="chip"><div class="k">${t("responses")}</div><div class="v num">${st.rs}</div></div>
+  <div class="chip"><div class="k">${t("tests")}</div><div class="v num">${st.ts}</div></div>
   <div class="chip"><div class="k">${t("results")}</div><div class="v num">${st.rx}</div></div>
   <div class="chip"><div class="k">${t("high")}</div><div class="v num" style="color:var(--high)">${st.h}</div></div>
   <div class="chip"><div class="k">${t("medium")}</div><div class="v num" style="color:var(--med)">${st.m}</div></div>
@@ -620,11 +729,12 @@ function detail(){
  const n=findNode(c,state.sel);if(!n)return "";
  const par=parentOf(c,state.sel);
  const nk=kx(n);const badge=nk==="risk"?`<span class="badge ${sevClass(n.sev)}">${kindLabel(nk)}</span>`:
-   `<span class="badge ${nk==="obj"?"b-t":nk==="resp"?"b-v":"b-l"}">${kindLabel(nk)}</span>`;
+   `<span class="badge ${nk==="obj"?"b-t":nk==="resp"?"b-v":nk==="test"?"b-m":"b-l"}">${kindLabel(nk)}</span>`;
  let meta="";
  if(nk==="obj")meta=[[t("ref"),n.ref],[t("owner"),L(n.to)],[t("createdBy"),L(n.by)],[t("date"),n.date+" · "+n.time]];
  else if(nk==="risk")meta=[[t("riskLevel"),`<span class="badge ${sevClass(n.sev)}">${sevLabel(n.sev)}</span>`],[t("owner"),L(n.to)],[t("createdBy"),L(n.by)],[t("status"),`<span class="badge ${stClass(n.status)}">${stLabel(n.status)}</span>`]];
  else if(nk==="resp")meta=[[t("respType"),typeLabel(n.type)],[t("owner"),L(n.to)],[t("createdBy"),L(n.by)],[t("status"),`<span class="badge ${stClass(n.status)}">${stLabel(n.status)}</span>`]];
+ else if(nk==="test")meta=[[t("owner"),L(n.to)],[t("createdBy"),L(n.by)],[t("status"),`<span class="badge ${stClass(n.status)}">${stLabel(n.status)}</span>`]];
  else meta=[[t("status"),`<span class="badge ${stClass(n.status)}">${stLabel(n.status)}</span>`],[t("createdBy"),L(n.by)],[t("date"),n.date],[t("time"),n.time]];
  const metaHtml=`<div class="meta-grid">${meta.map(([k,v])=>`<div class="meta-c"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("")}</div>`+
   (nk!=="res"?`<div class="meta-grid" style="grid-template-columns:1fr 1fr"><div class="meta-c"><div class="k">${t("date")}</div><div class="v mono num">${n.date}</div></div><div class="meta-c"><div class="k">${t("time")}</div><div class="v mono num">${n.time}</div></div></div>`:"");
@@ -638,24 +748,26 @@ function detail(){
    <span>${t("date")}: <b class="mono num">${k.date}</b></span><span>${t("time")}: <b class="mono num">${k.time}</b></span>
    ${k.kids.length?`<span>${kidsLabel(kx(k))}: <b>${k.kids.length}</b></span>`:""}</div></div>`).join("");
  const opts=USERS.map((u,i)=>`<option value="${i}">${esc(L(u.name))}</option>`).join("");
- const addBlock=nk==="risk"?`
-  <span class="side no-print"><button class="btn xs" id="btn-add">+ ${t("addResponse")}</button></span>`:"";
- const form=nk==="risk"?`
+ const am=ADD_META[nk];
+ const addBlock=am?`
+  <span class="side no-print"><button class="btn xs" id="btn-add">+ ${t(am.labelKey)}</button></span>`:"";
+ const form=am?`
   <div class="add-form ${state.adding?"open":""}">
-   <div class="field"><label>${t("respTitle")}</label><input id="f-ttl"></div>
-   <div class="field"><label>${t("respText")}</label><textarea id="f-text" rows="2"></textarea></div>
+   <div class="field"><label>${t(am.titleKey)}</label><input id="f-ttl"></div>
+   <div class="field"><label>${t(am.textKey)}</label><textarea id="f-text" rows="2"></textarea></div>
    <div class="form-row">
-    <div class="field"><label>${t("assignTo")}</label><select id="f-to">${opts}</select></div>
-    <div class="field"><label>${t("respType")}</label><select id="f-type"><option value="prev">${t("type_prev")}</option><option value="det">${t("type_det")}</option><option value="mon">${t("type_mon")}</option></select></div>
-    <div class="field"><label>${t("status")}</label><select id="f-st"><option value="inprog">${t("inprog")}</option><option value="done">${t("done")}</option><option value="late">${t("late")}</option></select></div></div>
+    ${am.kind!=="res"?`<div class="field"><label>${t("assignTo")}</label><select id="f-to">${opts}</select></div>`:""}
+    ${am.kind==="resp"?`<div class="field"><label>${t("respType")}</label><select id="f-type"><option value="prev">${t("type_prev")}</option><option value="det">${t("type_det")}</option><option value="mon">${t("type_mon")}</option></select></div>`:""}
+    <div class="field"><label>${t("status")}</label><select id="f-st">${am.statusOpts.map(s=>`<option value="${s}">${t(s==="inprogress"?"testInprogress":s)}</option>`).join("")}</select></div></div>
    <div style="display:flex;gap:6px"><button class="btn xs" id="btn-save">${t("save")}</button><button class="btn ghost xs" id="btn-cancel">${t("cancel")}</button></div></div>`:"";
+ const noKidsKey={risk:"noResp",resp:"noTest",test:"noRes"}[nk]||"noRes";
  return `<div class="d-head">
    <div class="d-eyebrow"><span style="color:${kindColor(n)};font-size:12px">${ICON[kx(n)]}</span>${badge}<span class="mono">${n.code}</span><span>${esc(L(c))}</span>${par?`<span>›</span><span>${esc(L(par.t))}</span>`:""}</div>
    <h3 class="d-title">${esc(L(n.t))}</h3><p class="d-desc">${esc(L(n.d))}</p></div>
   ${metaHtml}
   <div class="d-body">
    ${nk!=="res"?`<div class="sec-t"><h4>${kidsLabel(nk)}</h4><span class="cnt">${n.kids.length}</span>${addBlock}</div>
-   ${kids||`<div style="padding:16px;text-align:center;color:var(--muted);border:1px dashed var(--line-2);border-radius:7px">${nk==="risk"?t("noResp"):t("noRes")}</div>`}
+   ${kids||`<div style="padding:16px;text-align:center;color:var(--muted);border:1px dashed var(--line-2);border-radius:7px">${t(noKidsKey)}</div>`}
    ${form}`:""}
   </div>`;}
 
@@ -805,12 +917,14 @@ function bind(){
  if(save)save.onclick=async()=>{
   const ttl=document.getElementById("f-ttl").value.trim(),txt=document.getElementById("f-text").value.trim();
   if(!ttl){document.getElementById("f-ttl").focus();return;}
-  const c=ownerOf(state.sel);if(!c)return;const n=findNode(c,state.sel);if(!n||kx(n)!=="risk")return;
-  const toIdx=+document.getElementById("f-to").value;
+  const c=ownerOf(state.sel);if(!c)return;const n=findNode(c,state.sel);if(!n)return;
+  const am=ADD_META[kx(n)];if(!am)return;
+  const payload={title:ttl,desc:txt||ttl,status:document.getElementById("f-st").value};
+  payload[am.idField]=n.dbId;
+  if(am.kind!=="res"){const toIdx=+document.getElementById("f-to").value;payload.assignedTo=USERS[toIdx]&&USERS[toIdx].id;}
+  if(am.kind==="resp")payload.type=document.getElementById("f-type").value;
   try{
-   await api("/responses",{method:"POST",body:JSON.stringify({riskId:n.dbId,title:ttl,desc:txt||ttl,
-     assignedTo:USERS[toIdx]&&USERS[toIdx].id,type:document.getElementById("f-type").value,
-     status:document.getElementById("f-st").value})});
+   await api(am.endpoint,{method:"POST",body:JSON.stringify(payload)});
    await loadAll();
   }catch(e){alert(e.message);}
   state.adding=false;render();};}
@@ -869,19 +983,23 @@ document.getElementById("btn-create").onclick=async()=>{
  if(btn.disabled)return;                       // منع أي نقرة إضافية أثناء التنفيذ
  const g=id=>document.getElementById(id).value.trim();
  const err=document.getElementById("su-err");err.style.display="none";
- const firm=g("su-firm"),admin=g("su-admin"),user=g("su-user"),pass=g("su-pass"),pass2=g("su-pass2");
- if(!firm||!admin||!user||!pass){err.textContent=t("reqFields");err.style.display="block";return;}
+ const code=g("su-code"),firm=g("su-firm"),admin=g("su-admin"),user=g("su-user"),pass=g("su-pass"),pass2=g("su-pass2");
+ if(!code||!firm||!admin||!user||!pass){err.textContent=t("reqFields");err.style.display="block";return;}
+ if(!/^[A-Za-z0-9_-]{3,20}$/.test(code)){err.textContent=t("codeFormat");err.style.display="block";return;}
  if(pass!==pass2){err.textContent=t("passMismatch");err.style.display="block";return;}
  if(!SIGNUP_IDEM_KEY)newSignupAttempt();        // احتياطاً إن لم يُنشأ بعد
  btn.disabled=true;
  try{
   const r=await api("/auth/register",{method:"POST",body:JSON.stringify({
-   firmName:firm,cr:g("su-cr"),city:g("su-city"),adminName:admin,
+   firmCode:code,firmName:firm,cr:g("su-cr"),city:g("su-city"),adminName:admin,
    email:g("su-email"),username:user,password:pass,idemKey:SIGNUP_IDEM_KEY})});
   TOKEN=r.token;localStorage.setItem("isqm_token",TOKEN);
   await enterApp();
   setTimeout(()=>alert(t("accCreated")+" "+r.firmCode+"\n"+t("user")+": "+user),150);
- }catch(e){err.textContent=e.message;err.style.display="block";}
+ }catch(e){
+  err.textContent=e.message==="firm_code_taken"?t("codeTaken"):e.message==="invalid_firm_code"?t("codeFormat"):e.message;
+  err.style.display="block";
+ }
  finally{btn.disabled=false;SIGNUP_IDEM_KEY=null;}};
 document.getElementById("btn-lang-login").onclick=()=>setLang(lang==="ar"?"en":"ar");
 document.getElementById("lg-ar").onclick=()=>setLang("ar");
