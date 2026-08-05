@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const ExcelJS = require('exceljs');
 const { query, tx, pool } = require('./db');
 
 const app = express();
@@ -654,6 +655,141 @@ app.get('/api/export', auth, requireAdmin, wrap(async (req, res) => {
     firm: firm.rows[0], users: users.rows, components: comps.rows,
     objectives: objs.rows, risks: risks.rows, responses: resps.rows, tests: tests.rows, results: results.rows
   });
+}));
+
+// قالب استيراد احترافي بصيغة Excel — يحتوي البيانات الحالية للتعديل عليها،
+// مع قوائم منسدلة حقيقية لأعمدة الربط (تشمل تلقائياً أي صف جديد تضيفه بنفس العمود المصدر).
+app.get('/api/import/template', auth, requireAdmin, wrap(async (req, res) => {
+  const fid = req.user.fid;
+  const [users, comps, objs, risks, resps, tests, results] = await Promise.all([
+    query('SELECT username, full_name_ar, role FROM users WHERE firm_id=$1 ORDER BY username', [fid]),
+    query('SELECT slug, seq, name_ar, name_en, desc_ar, desc_en FROM components WHERE firm_id=$1 ORDER BY seq', [fid]),
+    query(`SELECT o.code, c.slug AS component_slug, o.standard_ref, o.title_ar, o.title_en, o.desc_ar, o.desc_en,
+                  o.is_additional, ow.username AS owner_username
+             FROM objectives o JOIN components c ON c.id=o.component_id
+             LEFT JOIN users ow ON ow.id=o.owner_id WHERE o.firm_id=$1 ORDER BY o.code`, [fid]),
+    query(`SELECT k.code, o.code AS objective_code, k.title_ar, k.title_en, k.desc_ar, k.desc_en,
+                  k.severity, k.likelihood, k.impact, k.status, ow.username AS owner_username, k.due_date
+             FROM risks k JOIN objectives o ON o.id=k.objective_id
+             LEFT JOIN users ow ON ow.id=k.owner_id WHERE k.firm_id=$1 ORDER BY k.code`, [fid]),
+    query(`SELECT p.code, k.code AS risk_code, p.title_ar, p.title_en, p.desc_ar, p.desc_en,
+                  p.resp_type, p.status, au.username AS assigned_username, p.due_date
+             FROM responses p JOIN risks k ON k.id=p.risk_id
+             LEFT JOIN users au ON au.id=p.assigned_to WHERE p.firm_id=$1 ORDER BY p.code`, [fid]),
+    query(`SELECT tt.code, p.code AS response_code, tt.title_ar, tt.title_en, tt.desc_ar, tt.desc_en,
+                  tt.status, au.username AS assigned_username, tt.due_date
+             FROM tests tt JOIN responses p ON p.id=tt.response_id
+             LEFT JOIN users au ON au.id=tt.assigned_to WHERE tt.firm_id=$1 ORDER BY tt.code`, [fid]),
+    query(`SELECT x.code, tt.code AS test_code, x.title_ar, x.title_en, x.desc_ar, x.desc_en,
+                  x.status, tu.username AS tested_username, x.tested_at
+             FROM results x JOIN tests tt ON tt.id=x.test_id
+             LEFT JOIN users tu ON tu.id=x.tested_by WHERE x.firm_id=$1 ORDER BY x.code`, [fid])
+  ]);
+
+  const MAXROW = 500; // مدى الصفوف الذي تغطيه القوائم المنسدلة — يشمل أي صف جديد تضيفه بالإكسل
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'ISQM 1';
+
+  const shInstr = wb.addWorksheet('تعليمات');
+  shInstr.views = [{ rightToLeft: true }];
+  shInstr.getColumn(1).width = 110;
+  [
+    'قالب استيراد بيانات نظام ISQM 1',
+    '',
+    'الصفحات التالية تعرض بياناتك الحالية بالنظام — عدّل عليها مباشرة، أو أضف صفوفاً جديدة أسفل آخر صف بأي صفحة.',
+    '',
+    'أعمدة الربط (component_slug / objective_code / risk_code / response_code / test_code / أعمدة المستخدمين) قوائم منسدلة: انقر الخلية ثم السهم لاختيار القيمة.',
+    '',
+    'القوائم المنسدلة تشمل تلقائياً أي صف جديد تضيفه بالصفحة المصدر. مثال: أضف هدفاً جديداً بصفحة "الأهداف" بكود O-99، ثم اذهب لصفحة "المخاطر" وستجد O-99 ضمن قائمة objective_code مباشرة — دون تنزيل قالب جديد.',
+    '',
+    'لإضافة عنصر جديد: أضف صفاً بصفحته الصحيحة، اكتب له كوداً غير مكرر بعمود code، ثم اختره من القائمة المنسدلة بعمود الربط بالصفحة التالية.',
+    '',
+    'بعد التعديل احفظ الملف وارفعه من زر الاستيراد بصفحة إدارة الجودة. تنبيه: الاستيراد يستبدل كامل شجرة الأهداف↓النتائج الحالية بمحتوى الملف، ولا يمسّ المستخدمين ولا بيانات الشركة.'
+  ].forEach((line) => shInstr.addRow([line]));
+
+  const enumVal = (values) => ({ type: 'list', allowBlank: true, formulae: [`"${values.join(',')}"`] });
+  const nameVal = (definedName) => ({ type: 'list', allowBlank: true, formulae: [definedName] });
+  const colLetter = (i) => {
+    let s = '', n = i + 1;
+    while (n > 0) { const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); }
+    return s;
+  };
+
+  // ورقة تُبنى أولاً ثم تُسجَّل كنطاق مُسمّى (defined name) ليُستخدم في القوائم المنسدلة.
+  // استخدام الأسماء المعرّفة بدل الإشارة المباشرة للأوراق يتفادى مشاكل توافق الإكسل مع أسماء الأوراق العربية.
+  function addSheet(name, headers, rows) {
+    const sh = wb.addWorksheet(name);
+    sh.views = [{ rightToLeft: true }];
+    const hr = sh.addRow(headers);
+    hr.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    hr.eachCell((c) => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0E7C6B' } }; });
+    headers.forEach((_, i) => { sh.getColumn(i + 1).width = 22; });
+    rows.forEach((r) => sh.addRow(headers.map((h) => (r[h] == null ? '' : r[h]))));
+    sh.views = [{ rightToLeft: true, state: 'frozen', ySplit: 1 }];
+    sh.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
+    return sh;
+  }
+  // يضيف تحقق قائمة على عمود كامل بنداء واحد — مهم: نداء واحد لكل عمود يمنع تكرار
+  // النطاقات المتداخلة الذي يجعل الإكسل يتجاهل القوائم المنسدلة بالكامل.
+  const applyCol = (sheet, headers, header, validation) => {
+    const idx = headers.indexOf(header);
+    if (idx < 0) return;
+    const c = colLetter(idx);
+    sheet.dataValidations.add(`${c}2:${c}${MAXROW}`, validation);
+  };
+  const defineList = (sheetName, headers, header, listName) => {
+    const c = colLetter(headers.indexOf(header));
+    wb.definedNames.add(`'${sheetName}'!$${c}$2:$${c}$${MAXROW}`, listName);
+  };
+
+  const userHeaders = ['username', 'full_name_ar', 'role'];
+  addSheet('المستخدمون', userHeaders, users.rows);
+  defineList('المستخدمون', userHeaders, 'username', 'LIST_USERS');
+
+  const compHeaders = ['slug', 'seq', 'name_ar', 'name_en', 'desc_ar', 'desc_en'];
+  addSheet('المكونات', compHeaders, comps.rows);
+  defineList('المكونات', compHeaders, 'slug', 'LIST_COMPONENTS');
+
+  const objHeaders = ['code', 'component_slug', 'standard_ref', 'title_ar', 'title_en', 'desc_ar', 'desc_en', 'is_additional', 'owner_username'];
+  const shObj = addSheet('الأهداف', objHeaders, objs.rows);
+  defineList('الأهداف', objHeaders, 'code', 'LIST_OBJECTIVES');
+  applyCol(shObj, objHeaders, 'component_slug', nameVal('LIST_COMPONENTS'));
+  applyCol(shObj, objHeaders, 'is_additional', enumVal(['TRUE', 'FALSE']));
+  applyCol(shObj, objHeaders, 'owner_username', nameVal('LIST_USERS'));
+
+  const riskHeaders = ['code', 'objective_code', 'title_ar', 'title_en', 'desc_ar', 'desc_en', 'severity', 'likelihood', 'impact', 'status', 'owner_username', 'due_date'];
+  const shRisk = addSheet('المخاطر', riskHeaders, risks.rows);
+  defineList('المخاطر', riskHeaders, 'code', 'LIST_RISKS');
+  applyCol(shRisk, riskHeaders, 'objective_code', nameVal('LIST_OBJECTIVES'));
+  applyCol(shRisk, riskHeaders, 'severity', enumVal(['high', 'medium', 'low']));
+  applyCol(shRisk, riskHeaders, 'status', enumVal(['open', 'monitored', 'closed']));
+  applyCol(shRisk, riskHeaders, 'owner_username', nameVal('LIST_USERS'));
+
+  const respHeaders = ['code', 'risk_code', 'title_ar', 'title_en', 'desc_ar', 'desc_en', 'resp_type', 'status', 'assigned_username', 'due_date'];
+  const shResp = addSheet('الإجراءات', respHeaders, resps.rows);
+  defineList('الإجراءات', respHeaders, 'code', 'LIST_RESPONSES');
+  applyCol(shResp, respHeaders, 'risk_code', nameVal('LIST_RISKS'));
+  applyCol(shResp, respHeaders, 'resp_type', enumVal(['prev', 'det', 'mon']));
+  applyCol(shResp, respHeaders, 'status', enumVal(['inprog', 'done', 'late']));
+  applyCol(shResp, respHeaders, 'assigned_username', nameVal('LIST_USERS'));
+
+  const testHeaders = ['code', 'response_code', 'title_ar', 'title_en', 'desc_ar', 'desc_en', 'status', 'assigned_username', 'due_date'];
+  const shTest = addSheet('الاختبارات', testHeaders, tests.rows);
+  defineList('الاختبارات', testHeaders, 'code', 'LIST_TESTS');
+  applyCol(shTest, testHeaders, 'response_code', nameVal('LIST_RESPONSES'));
+  applyCol(shTest, testHeaders, 'status', enumVal(['planned', 'inprogress', 'completed']));
+  applyCol(shTest, testHeaders, 'assigned_username', nameVal('LIST_USERS'));
+
+  const resHeaders = ['code', 'test_code', 'title_ar', 'title_en', 'desc_ar', 'desc_en', 'status', 'tested_username', 'tested_at'];
+  const shRes = addSheet('النتائج', resHeaders, results.rows);
+  applyCol(shRes, resHeaders, 'test_code', nameVal('LIST_TESTS'));
+  applyCol(shRes, resHeaders, 'status', enumVal(['effective', 'partial', 'ineffective']));
+  applyCol(shRes, resHeaders, 'tested_username', nameVal('LIST_USERS'));
+
+  const buf = await wb.xlsx.writeBuffer();
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', 'attachment; filename="isqm-import-template.xlsx"');
+  res.send(Buffer.from(buf));
 }));
 
 // استيراد: يستبدل شجرة الجودة الكاملة (مكوّنات→أهداف→مخاطر→استجابات→اختبارات→نتائج) لنفس

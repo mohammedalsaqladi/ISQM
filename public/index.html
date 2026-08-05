@@ -240,6 +240,16 @@ body[dir="rtl"] .tcar span{display:inline-block;transform:rotate(180deg)}
 .item-meta{display:flex;gap:13px;flex-wrap:wrap;margin-top:7px;padding-top:6px;border-top:1px dashed var(--line);font-size:10.5px;color:var(--muted)}
 .item-meta b{color:var(--ink-2);font-weight:600}
 .add-form{border:1px solid var(--line-2);border-radius:7px;padding:11px;background:#F8FAF9;margin-top:4px;display:none}
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(18,34,46,.45);z-index:100;display:grid;place-items:center;padding:20px}
+.modal{background:#fff;border-radius:10px;box-shadow:0 18px 50px -12px rgba(18,34,46,.45);width:100%;max-width:440px;max-height:88vh;display:flex;flex-direction:column}
+.modal-h{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line)}
+.modal-h h3{margin:0;font-size:14px;font-weight:600;flex:1}
+.modal-x{cursor:pointer;color:var(--muted);font-size:17px;line-height:1;background:none;border:0;padding:2px 6px;border-radius:5px}
+.modal-x:hover{background:var(--paper);color:var(--ink)}
+.modal-b{padding:14px 16px;overflow-y:auto}
+.modal-f{display:flex;gap:7px;justify-content:flex-end;padding:11px 16px;border-top:1px solid var(--line);background:#FAFBFB;border-radius:0 0 10px 10px}
+.modal-err{color:var(--high);font-size:11.5px;margin-top:8px;display:none}
 .add-form.open{display:block}
 .form-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
 .tabs{display:flex;gap:2px;padding:0 10px;border:1px solid var(--line);background:#fff;border-radius:var(--r);margin-bottom:12px}
@@ -330,6 +340,8 @@ tr:last-child td{border-bottom:0}
   </aside>
 </div></div>
 
+<div id="modal-root"></div>
+
 <script>
 /* ---------------- i18n ---------------- */
 const T={
@@ -350,7 +362,8 @@ objective:"هدف",risk:"خطر",response:"استجابة",test:"اختبار",r
 addTest:"إضافة اختبار",addResult:"إضافة نتيجة",addRisk:"إضافة خطر",addObjective:"إضافة هدف",testTitle:"عنوان الاختبار",testText:"وصف الاختبار",resultTitle:"عنوان النتيجة",resultText:"وصف النتيجة",riskTitle:"عنوان الخطر",riskText:"وصف الخطر",objTitle:"عنوان الهدف",objText:"وصف الهدف",itemsCount:"عدد العناصر",noRisk:"لا توجد مخاطر بعد.",
 planned:"مخطط",testInprogress:"قيد التنفيذ",completed:"مكتمل",ineffective:"غير فعّالة",
 downloadTemplate:"⭳ قالب الاستيراد",addComponent:"مكوّن جديد",edit:"تعديل",
-newComponentNamePrompt:"اسم المكوّن الجديد (عربي):",newComponentSlugPrompt:"معرّف مختصر للمكوّن (إنجليزي، بدون مسافات):",editComponentNamePrompt:"الاسم الجديد للمكوّن:",
+componentName:"اسم المكوّن",componentSlug:"معرّف المكوّن (إنجليزي، بدون مسافات)",editComponent:"تعديل المكوّن",editUser:"تعديل المستخدم",
+editObjective:"تعديل الهدف",editRisk:"تعديل الخطر",editResponse:"تعديل الإجراء",editTest:"تعديل الاختبار",editResult:"تعديل النتيجة",
 compStats:"إحصائيات المكوّن",description:"الوصف",
 companyTitle:"بيانات الشركة",companySub:"المعلومات النظامية والمهنية للمكتب.",usersTitle:"المستخدمون",usersSub:"مستخدمو النظام وصلاحياتهم.",profileTitle:"ملفي الشخصي",profileSub:"بياناتك في النظام.",
 name:"الاسم",role:"الدور",email:"البريد",lastLogin:"آخر دخول",active:"نشط",inactive:"موقوف",
@@ -386,7 +399,8 @@ objective:"Objective",risk:"Risk",response:"Response",test:"Test",result:"Result
 addTest:"Add test",addResult:"Add result",addRisk:"Add risk",addObjective:"Add objective",testTitle:"Test title",testText:"Test description",resultTitle:"Result title",resultText:"Result description",riskTitle:"Risk title",riskText:"Risk description",objTitle:"Objective title",objText:"Objective description",itemsCount:"Item counts",noRisk:"No risks yet.",
 planned:"Planned",testInprogress:"In progress",completed:"Completed",ineffective:"Ineffective",
 downloadTemplate:"⭳ Import template",addComponent:"New component",edit:"Edit",
-newComponentNamePrompt:"New component name (Arabic):",newComponentSlugPrompt:"Short component slug (English, no spaces):",editComponentNamePrompt:"New name for the component:",
+componentName:"Component name",componentSlug:"Component slug (English, no spaces)",editComponent:"Edit component",editUser:"Edit user",
+editObjective:"Edit objective",editRisk:"Edit risk",editResponse:"Edit response",editTest:"Edit test",editResult:"Edit result",
 compStats:"Component statistics",description:"Description",
 companyTitle:"Firm profile",companySub:"Statutory and professional details.",usersTitle:"Users",usersSub:"System users and permissions.",profileTitle:"My profile",profileSub:"Your details in the system.",
 name:"Name",role:"Role",email:"Email",lastLogin:"Last sign-in",active:"Active",inactive:"Suspended",
@@ -429,6 +443,126 @@ async function api(path,opts={}){
  if(!res.ok)throw new Error(data.error||"request_failed");
  return data;}
 
+/* ---------------- modal engine ---------------- */
+/* openModal({title, fields, submitLabel, onSubmit}) — fields: [{id,label,type,value,options,required,rows,placeholder}]
+   onSubmit(values) يرمي استثناءً برسالة عند الفشل فتُعرض داخل النافذة بدل إغلاقها. */
+let MODAL_OPEN=false;
+function closeModal(){
+ MODAL_OPEN=false;
+ document.getElementById("modal-root").innerHTML="";
+ document.removeEventListener("keydown",modalEsc);}
+function modalEsc(e){if(e.key==="Escape")closeModal();}
+function openModal(cfg){
+ const root=document.getElementById("modal-root");
+ const fieldHtml=(f)=>{
+  const id="m-"+f.id;
+  if(f.type==="select")
+   return `<div class="field"><label>${esc(f.label)}</label><select id="${id}">${(f.options||[]).map(o=>`<option value="${esc(o.value)}" ${o.value===f.value?"selected":""}>${esc(o.label)}</option>`).join("")}</select></div>`;
+  if(f.type==="textarea")
+   return `<div class="field"><label>${esc(f.label)}</label><textarea id="${id}" rows="${f.rows||3}" placeholder="${esc(f.placeholder||"")}">${esc(f.value||"")}</textarea></div>`;
+  return `<div class="field"><label>${esc(f.label)}</label><input id="${id}" type="${f.type||"text"}" value="${esc(f.value==null?"":String(f.value))}" placeholder="${esc(f.placeholder||"")}" ${f.type==="number"?'min="0"':""}></div>`;
+ };
+ root.innerHTML=`<div class="modal-bg" id="m-bg"><div class="modal" role="dialog" aria-modal="true">
+  <div class="modal-h"><h3>${esc(cfg.title)}</h3><button class="modal-x" id="m-close" aria-label="${t("cancel")}">✕</button></div>
+  <div class="modal-b">${cfg.fields.map(fieldHtml).join("")}<div class="modal-err" id="m-err"></div></div>
+  <div class="modal-f"><button class="btn ghost xs" id="m-cancel">${t("cancel")}</button>
+   <button class="btn xs" id="m-ok">${esc(cfg.submitLabel||t("save"))}</button></div></div></div>`;
+ MODAL_OPEN=true;
+ document.addEventListener("keydown",modalEsc);
+ document.getElementById("m-close").onclick=closeModal;
+ document.getElementById("m-cancel").onclick=closeModal;
+ document.getElementById("m-bg").onclick=e=>{if(e.target.id==="m-bg")closeModal();};
+ const first=cfg.fields[0];
+ if(first){const el=document.getElementById("m-"+first.id);if(el)el.focus();}
+ const ok=document.getElementById("m-ok");
+ const submit=async()=>{
+  if(ok.disabled)return;
+  const err=document.getElementById("m-err");err.style.display="none";
+  const vals={};
+  for(const f of cfg.fields){
+   const el=document.getElementById("m-"+f.id);
+   let v=el?el.value:"";
+   if(typeof v==="string")v=v.trim();
+   if(f.required&&!v){err.textContent=t("reqFields");err.style.display="block";if(el)el.focus();return;}
+   vals[f.id]=v;
+  }
+  ok.disabled=true;
+  try{await cfg.onSubmit(vals);closeModal();}
+  catch(e){err.textContent=e.message||String(e);err.style.display="block";ok.disabled=false;}
+ };
+ ok.onclick=submit;
+ root.querySelectorAll("input").forEach(el=>el.addEventListener("keydown",e=>{if(e.key==="Enter")submit();}));}
+
+const userOptions=()=>USERS.map(u=>({value:u.id,label:L(u.name)}));
+const statusOptions=(list)=>list.map(s=>({value:s,label:t(s==="inprogress"?"testInprogress":s)}));
+
+/* ---------------- add / edit via modal ---------------- */
+function openAddModal(parentCode){
+ const c=ownerOf(parentCode);if(!c)return;
+ const n=findNode(c,parentCode);if(!n)return;
+ const am=ADD_META[kx(n)];if(!am)return;
+ const fields=[
+  {id:"title",label:t(am.titleKey),required:true},
+  {id:"desc",label:t(am.textKey),type:"textarea",rows:3}];
+ if(am.kind!=="res")fields.push({id:"assignedTo",label:t("assignTo"),type:"select",options:userOptions(),value:USERS[0]&&USERS[0].id});
+ if(am.extra==="severity")fields.push({id:"severity",label:t("riskLevel"),type:"select",value:"medium",
+   options:[{value:"high",label:t("high")},{value:"medium",label:t("medium")},{value:"low",label:t("low")}]});
+ if(am.extra==="type")fields.push({id:"type",label:t("respType"),type:"select",value:"prev",
+   options:[{value:"prev",label:t("type_prev")},{value:"det",label:t("type_det")},{value:"mon",label:t("type_mon")}]});
+ fields.push({id:"status",label:t("status"),type:"select",options:statusOptions(am.statusOpts),value:am.statusOpts[0]});
+ openModal({title:t(am.labelKey),submitLabel:t("save"),fields,onSubmit:async(v)=>{
+  const payload={title:v.title,desc:v.desc||v.title,status:v.status};
+  payload[am.idField]=n.dbId;
+  if(v.assignedTo)payload.assignedTo=v.assignedTo;
+  if(v.severity)payload.severity=v.severity;
+  if(v.type)payload.type=v.type;
+  await api(am.endpoint,{method:"POST",body:JSON.stringify(payload)});
+  await loadAll();render();}});}
+
+function openAddObjectiveModal(){
+ const list=comps();if(!list[0])return;
+ openModal({title:t("addObjective"),submitLabel:t("save"),fields:[
+  {id:"title",label:t("objTitle"),required:true},
+  {id:"desc",label:t("objText"),type:"textarea",rows:3},
+  {id:"standardRef",label:t("ref"),placeholder:"[1.28]"},
+  {id:"ownerId",label:t("assignTo"),type:"select",options:userOptions(),value:USERS[0]&&USERS[0].id}
+ ],onSubmit:async(v)=>{
+  await api("/objectives",{method:"POST",body:JSON.stringify({componentId:list[0].dbId,title:v.title,
+    desc:v.desc||v.title,standardRef:v.standardRef,ownerId:v.ownerId})});
+  await loadAll();render();}});}
+
+const EDIT_META={
+ obj:{endpoint:"/objectives",titleKey:"objTitle",textKey:"objText",labelKey:"editObjective"},
+ risk:{endpoint:"/risks",titleKey:"riskTitle",textKey:"riskText",labelKey:"editRisk",statusOpts:["open","monitored","closed"],extra:"severity"},
+ resp:{endpoint:"/responses",titleKey:"respTitle",textKey:"respText",labelKey:"editResponse",statusOpts:["inprog","done","late"],extra:"type"},
+ test:{endpoint:"/tests",titleKey:"testTitle",textKey:"testText",labelKey:"editTest",statusOpts:["planned","inprogress","completed"]},
+ res:{endpoint:"/results",titleKey:"resultTitle",textKey:"resultText",labelKey:"editResult",statusOpts:["effective","partial","ineffective"]}
+};
+function openEditModal(code){
+ const c=ownerOf(code);if(!c)return;
+ const n=findNode(c,code);if(!n)return;
+ const nk=kx(n),em=EDIT_META[nk];if(!em)return;
+ const curOwner=(USERS.find(u=>L(u.name)===L(n.to))||{}).id;
+ const fields=[
+  {id:"title",label:t(em.titleKey),value:L(n.t),required:true},
+  {id:"desc",label:t(em.textKey),type:"textarea",rows:3,value:L(n.d)}];
+ if(nk==="obj")fields.push({id:"standardRef",label:t("ref"),value:n.ref||""});
+ if(nk!=="res")fields.push({id:"ownerId",label:t("assignTo"),type:"select",options:userOptions(),value:curOwner});
+ if(em.extra==="severity")fields.push({id:"severity",label:t("riskLevel"),type:"select",value:n.sev,
+   options:[{value:"high",label:t("high")},{value:"medium",label:t("medium")},{value:"low",label:t("low")}]});
+ if(em.extra==="type")fields.push({id:"type",label:t("respType"),type:"select",value:n.type,
+   options:[{value:"prev",label:t("type_prev")},{value:"det",label:t("type_det")},{value:"mon",label:t("type_mon")}]});
+ if(em.statusOpts)fields.push({id:"status",label:t("status"),type:"select",options:statusOptions(em.statusOpts),value:n.status});
+ openModal({title:t(em.labelKey),submitLabel:t("save"),fields,onSubmit:async(v)=>{
+  const payload={title:v.title,desc:v.desc||v.title};
+  if(v.standardRef!==undefined)payload.standardRef=v.standardRef;
+  if(v.ownerId)payload[nk==="resp"||nk==="test"?"assignedTo":"ownerId"]=v.ownerId;
+  if(v.severity)payload.severity=v.severity;
+  if(v.type)payload.type=v.type;
+  if(v.status)payload.status=v.status;
+  await api(em.endpoint+"/"+n.dbId,{method:"PATCH",body:JSON.stringify(payload)});
+  await loadAll();render();}});}
+
 /* ---------------- backup: export / import ---------------- */
 async function doExport(){
  try{
@@ -441,31 +575,19 @@ async function doExport(){
   URL.revokeObjectURL(url);
  }catch(e){alert(e.message);}}
 
-const TEMPLATE_SHEETS={
- "المكونات":["slug","seq","name_ar","name_en","desc_ar","desc_en"],
- "الأهداف":["code","component_slug","standard_ref","title_ar","title_en","desc_ar","desc_en","is_additional","owner_username"],
- "المخاطر":["code","objective_code","title_ar","title_en","desc_ar","desc_en","severity","likelihood","impact","status","owner_username","due_date"],
- "الإجراءات":["code","risk_code","title_ar","title_en","desc_ar","desc_en","resp_type","status","assigned_username","due_date"],
- "الاختبارات":["code","response_code","title_ar","title_en","desc_ar","desc_en","status","assigned_username","due_date"],
- "النتائج":["code","test_code","title_ar","title_en","desc_ar","desc_en","status","tested_username","tested_at"]
-};
 const SHEET_TO_KEY={"المكونات":"components","الأهداف":"objectives","المخاطر":"risks","الإجراءات":"responses","الاختبارات":"tests","النتائج":"results"};
 
-function downloadTemplate(){
- if(typeof XLSX==="undefined"){alert(t("xlsxLoadError"));return;}
- const wb=XLSX.utils.book_new();
- const instr=[[t("tplInstrTitle")],[""],[t("tplInstr1")],[""],[t("tplInstr2")],[""],[t("tplInstr3")],[""],[t("tplInstr4")]];
- XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(instr),t("tplInstructionsSheet"));
- const refRows=[["type","code_or_slug","title"]];
- DATA.forEach(c=>refRows.push(["component",c.id,L(c)]));
- DATA.forEach(c=>walk(c,n=>refRows.push([kx(n),n.code,L(n.t)])));
- refRows.push(["",""," "]);
- USERS.forEach(u=>refRows.push(["username",u.username,L(u.name)]));
- XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(refRows),t("tplRefSheet"));
- Object.entries(TEMPLATE_SHEETS).forEach(([name,cols])=>{
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([cols]),name);
- });
- XLSX.writeFile(wb,"isqm-import-template.xlsx");}
+async function downloadTemplate(){
+ try{
+  const res=await fetch("/api/import/template",{headers:TOKEN?{Authorization:"Bearer "+TOKEN}:{}});
+  if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d.error||"request_failed");}
+  const blob=await res.blob();
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download="isqm-import-template.xlsx";
+  document.body.appendChild(a);a.click();a.remove();
+  URL.revokeObjectURL(url);
+ }catch(e){alert(e.message);}}
 
 async function doImportExcel(file){
  const buf=await file.arrayBuffer();
@@ -634,24 +756,20 @@ function buildNav(){
  const addC=document.getElementById("btn-add-comp");
  if(addC)addC.onclick=(e)=>{e.stopPropagation();addComponentPrompt();};}
 
-async function addComponentPrompt(){
- const nameAr=prompt(t("newComponentNamePrompt"));
- if(!nameAr||!nameAr.trim())return;
- let slug=prompt(t("newComponentSlugPrompt"),nameAr.trim().replace(/[^a-zA-Z0-9]+/g,"-").toLowerCase().replace(/^-+|-+$/g,"").slice(0,20)||"comp");
- if(!slug||!slug.trim())return;
- slug=slug.trim().toLowerCase();
- try{
-  await api("/components",{method:"POST",body:JSON.stringify({slug,nameAr:nameAr.trim()})});
-  await loadAll();buildNav();render();
- }catch(e){alert(e.message);}}
+function addComponentPrompt(){
+ openModal({title:t("addComponent"),submitLabel:t("save"),fields:[
+  {id:"nameAr",label:t("componentName"),required:true},
+  {id:"slug",label:t("componentSlug"),required:true,placeholder:"gov, ethics, ..."}
+ ],onSubmit:async(v)=>{
+  await api("/components",{method:"POST",body:JSON.stringify({slug:v.slug.toLowerCase(),nameAr:v.nameAr})});
+  await loadAll();buildNav();render();}});}
 
-async function editComponentPrompt(dbId,curName){
- const nameAr=prompt(t("editComponentNamePrompt"),curName);
- if(!nameAr||!nameAr.trim()||nameAr.trim()===curName)return;
- try{
-  await api("/components/"+dbId,{method:"PATCH",body:JSON.stringify({nameAr:nameAr.trim()})});
-  await loadAll();buildNav();render();
- }catch(e){alert(e.message);}}
+function editComponentPrompt(dbId,curName){
+ openModal({title:t("editComponent"),submitLabel:t("save"),fields:[
+  {id:"nameAr",label:t("componentName"),value:curName,required:true}
+ ],onSubmit:async(v)=>{
+  await api("/components/"+dbId,{method:"PATCH",body:JSON.stringify({nameAr:v.nameAr})});
+  await loadAll();buildNav();render();}});}
 
 /* ---------------- views ---------------- */
 function printHead(title){const n=new Date();
@@ -728,16 +846,7 @@ function viewQuality(){
   <button class="btn ghost xs icobtn" onclick="doExport()" title="${t("exportData")}">⭳</button>
   <button class="btn ghost xs icobtn" onclick="pickImportFile()" title="${t("importData")}">⭱</button>
   <input type="file" id="imp-file" accept=".json,.xlsx,.xls" style="display:none" onchange="doImport(this.files[0]);this.value='';">`:"";
- const opts=USERS.map((u,i)=>`<option value="${i}">${esc(L(u.name))}</option>`).join("");
  const addObjBtn=(!all&&canManage)?`<button class="btn xs" id="btn-add-obj" title="+ ${t("addObjective")}">+ ${t("addObjective")}</button>`:"";
- const addObjForm=state.addingObjective?`
-  <div class="add-form open" style="margin:8px">
-   <div class="field"><label>${t("objTitle")}</label><input id="fo-ttl"></div>
-   <div class="field"><label>${t("objText")}</label><textarea id="fo-text" rows="2"></textarea></div>
-   <div class="form-row">
-    <div class="field"><label>${t("ref")}</label><input id="fo-ref" placeholder="[1.28]"></div>
-    <div class="field"><label>${t("assignTo")}</label><select id="fo-to">${opts}</select></div></div>
-   <div style="display:flex;gap:6px"><button class="btn xs" id="btn-save-obj">${t("save")}</button><button class="btn ghost xs" id="btn-cancel-obj">${t("cancel")}</button></div></div>`:"";
  return printHead(title)+`
  <div class="page-head"><div><h2>${all?"":`<span class="mono" style="color:var(--muted);font-size:12px">${list[0].num}</span> `}${esc(title)}</h2><p>${t("compStats")}</p></div>
  <div class="side no-print">${backupBtns}<button class="btn ghost xs icobtn" onclick="window.print()" title="${t("print")}">⎙</button></div></div>
@@ -766,7 +875,7 @@ function viewQuality(){
     <button class="btn ghost xs icobtn" id="btn-col" title="${t("collapse")}">⤡</button>
     ${addObjBtn}
    </div>
-   ${addObjForm}${legend}<div class="tbody">${tree}</div></div>
+   ${legend}<div class="tbody">${tree}</div></div>
   <div class="card detail">
    <div class="wtabs no-print"><div class="wtab ${state.wTab==="details"?"on":""}" data-wtab="details">${t("details")}</div>
    <div class="wtab ${state.wTab==="chat"?"on":""}" data-wtab="chat">✉ ${t("chat")} ${unreadIn(state.comp==="all"?(state.sel?ownerOf(state.sel).id:"all"):state.comp,state.sel||null)?`<span class="ubadge num">${unreadIn(state.comp==="all"?(state.sel?ownerOf(state.sel).id:"all"):state.comp,state.sel||null)}</span>`:`<span class="cnt num">${scopeMsgs().length}</span>`}</div></div>
@@ -799,26 +908,18 @@ function detail(){
  const opts=USERS.map((u,i)=>`<option value="${i}">${esc(L(u.name))}</option>`).join("");
  const am=ADD_META[nk];
  const addBlock=am?`
-  <span class="side no-print"><button class="btn xs" id="btn-add">+ ${t(am.labelKey)}</button></span>`:"";
- const form=am?`
-  <div class="add-form ${state.adding?"open":""}">
-   <div class="field"><label>${t(am.titleKey)}</label><input id="f-ttl"></div>
-   <div class="field"><label>${t(am.textKey)}</label><textarea id="f-text" rows="2"></textarea></div>
-   <div class="form-row">
-    ${am.kind!=="res"?`<div class="field"><label>${t("assignTo")}</label><select id="f-to">${opts}</select></div>`:""}
-    ${am.extra==="type"?`<div class="field"><label>${t("respType")}</label><select id="f-type"><option value="prev">${t("type_prev")}</option><option value="det">${t("type_det")}</option><option value="mon">${t("type_mon")}</option></select></div>`:""}
-    ${am.extra==="severity"?`<div class="field"><label>${t("riskLevel")}</label><select id="f-sev"><option value="high">${t("high")}</option><option value="medium" selected>${t("medium")}</option><option value="low">${t("low")}</option></select></div>`:""}
-    <div class="field"><label>${t("status")}</label><select id="f-st">${am.statusOpts.map(s=>`<option value="${s}">${t(s==="inprogress"?"testInprogress":s)}</option>`).join("")}</select></div></div>
-   <div style="display:flex;gap:6px"><button class="btn xs" id="btn-save">${t("save")}</button><button class="btn ghost xs" id="btn-cancel">${t("cancel")}</button></div></div>`:"";
+  <span class="side no-print"><button class="btn xs" data-open-add="${n.code}">+ ${t(am.labelKey)}</button></span>`:"";
+ const editBtn=EDIT_META[nk]?`<button class="btn ghost xs no-print" data-open-edit="${n.code}" title="${t(EDIT_META[nk].labelKey)}">✎ ${t("edit")}</button>`:"";
  const noKidsKey={obj:"noRisk",risk:"noResp",resp:"noTest",test:"noRes"}[nk]||"noRes";
  return `<div class="d-head">
    <div class="d-eyebrow"><span style="color:${kindColor(n)};font-size:12px">${ICON[kx(n)]}</span>${badge}<span class="mono">${n.code}</span><span>${esc(L(c))}</span>${par?`<span>›</span><span>${esc(L(par.t))}</span>`:""}</div>
-   <h3 class="d-title">${esc(L(n.t))}</h3><p class="d-desc">${esc(L(n.d))}</p></div>
+   <div style="display:flex;align-items:flex-start;gap:10px">
+    <div style="flex:1"><h3 class="d-title">${esc(L(n.t))}</h3><p class="d-desc">${esc(L(n.d))}</p></div>
+    ${editBtn}</div></div>
   ${metaHtml}
   <div class="d-body">
    ${nk!=="res"?`<div class="sec-t"><h4>${kidsLabel(nk)}</h4><span class="cnt">${n.kids.length}</span>${addBlock}</div>
-   ${kids||`<div style="padding:16px;text-align:center;color:var(--muted);border:1px dashed var(--line-2);border-radius:7px">${t(noKidsKey)}</div>`}
-   ${form}`:""}
+   ${kids||`<div style="padding:16px;text-align:center;color:var(--muted);border:1px dashed var(--line-2);border-radius:7px">${t(noKidsKey)}</div>`}`:""}
   </div>`;}
 
 
@@ -869,74 +970,71 @@ function viewChat(){
 
 function viewCompany(){const kv=(k,v)=>`<div class="kv"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`;
  const canManage=MY_ROLE==="owner"||MY_ROLE==="admin";
- const backupBtns=canManage?`
-  <button class="btn ghost xs icobtn" onclick="downloadTemplate()" title="${t("downloadTemplate")}">⧉</button>
-  <button class="btn ghost xs icobtn" onclick="doExport()" title="${t("exportData")}">⭳</button>
-  <button class="btn ghost xs icobtn" onclick="pickImportFile()" title="${t("importData")}">⭱</button>
-  <input type="file" id="imp-file" accept=".json,.xlsx,.xls" style="display:none" onchange="doImport(this.files[0]);this.value='';">`:"";
- const editBtn=canManage?`<button class="btn xs" id="btn-edit-firm">${state.editingFirm?t("cancel"):t("editFirm")}</button>`:"";
- const num=v=>(v==null||v==="—")?0:v;
- const editForm=(canManage&&state.editingFirm)?`<div class="card" style="margin-bottom:12px"><div class="card-b">
-   <div class="form-row">
-    <div class="field"><label>${t("firmName")}</label><input id="ef-name" value="${esc(L(FIRM.name))}"></div>
-    <div class="field"><label>${t("license")}</label><input id="ef-license" value="${FIRM.license==="—"?"":esc(FIRM.license)}"></div></div>
-   <div class="form-row">
-    <div class="field"><label>${t("cr")}</label><input id="ef-cr" value="${FIRM.cr==="—"?"":esc(FIRM.cr)}"></div>
-    <div class="field"><label>${t("phone")}</label><input id="ef-phone" value="${FIRM.phone==="—"?"":esc(FIRM.phone)}"></div></div>
-   <div class="form-row">
-    <div class="field"><label>${t("city")}</label><input id="ef-city" value="${esc(L(FIRM.city))}"></div>
-    <div class="field"><label>${t("country")}</label><input id="ef-country" value="${esc(L(FIRM.country))}"></div></div>
-   <div class="form-row">
-    <div class="field"><label>${t("partners")}</label><input id="ef-partners" type="number" min="0" value="${num(FIRM.partners)}"></div>
-    <div class="field"><label>${t("staff")}</label><input id="ef-staff" type="number" min="0" value="${num(FIRM.staff)}"></div>
-    <div class="field"><label>${t("engagements")}</label><input id="ef-engagements" type="number" min="0" value="${num(FIRM.engagements)}"></div></div>
-   <div class="field"><label>${t("scope")}</label><textarea id="ef-scope" rows="2">${esc(L(FIRM.scope))}</textarea></div>
-   <div style="display:flex;gap:6px"><button class="btn xs" id="btn-save-firm">${t("save")}</button></div>
-  </div></div>`:"";
+ const editBtn=canManage?`<button class="btn xs" id="btn-edit-firm">✎ ${t("editFirm")}</button>`:"";
  return printHead(t("companyTitle"))+`
  <div class="page-head"><div><h2>${t("companyTitle")}</h2><p>${t("companySub")}</p></div>
- <div class="side no-print">${backupBtns}${editBtn}<button class="btn ghost xs icobtn" onclick="window.print()" title="${t("print")}">⎙</button></div></div>
- ${editForm}
+ <div class="side no-print">${editBtn}<button class="btn ghost xs icobtn" onclick="window.print()" title="${t("print")}">⎙</button></div></div>
  <div class="grid2b"><div class="card"><div class="card-h"><h3>${t("companyTitle")}</h3></div><div class="card-b">
   ${kv(t("firmName"),L(FIRM.name))}${kv(t("license"),FIRM.license)}${kv(t("cr"),FIRM.cr)}${kv(t("city"),L(FIRM.city))}${kv(t("country"),L(FIRM.country))}${kv(t("phone"),FIRM.phone)}</div></div>
  <div class="card"><div class="card-h"><h3>ISQM 1</h3></div><div class="card-b">
   ${kv(t("scope"),L(FIRM.scope))}${kv(t("period"),L(FIRM.period))}${kv(t("respScope"),L(FIRM.respName||{}))}${kv(t("opRespScope"),L(FIRM.opRespName||{}))}${kv(t("partners"),FIRM.partners)}${kv(t("staff"),FIRM.staff)}${kv(t("engagements"),FIRM.engagements)}</div></div></div>`;}
 
+function openEditFirmModal(){
+ const clean=v=>(v==null||v==="—")?"":v;
+ openModal({title:t("editFirm"),submitLabel:t("save"),fields:[
+  {id:"name",label:t("firmName"),value:L(FIRM.name),required:true},
+  {id:"license",label:t("license"),value:clean(FIRM.license)},
+  {id:"cr",label:t("cr"),value:clean(FIRM.cr)},
+  {id:"phone",label:t("phone"),value:clean(FIRM.phone)},
+  {id:"city",label:t("city"),value:L(FIRM.city)},
+  {id:"country",label:t("country"),value:L(FIRM.country)},
+  {id:"partners",label:t("partners"),type:"number",value:clean(FIRM.partners)||0},
+  {id:"staff",label:t("staff"),type:"number",value:clean(FIRM.staff)||0},
+  {id:"engagements",label:t("engagements"),type:"number",value:clean(FIRM.engagements)||0},
+  {id:"scope",label:t("scope"),type:"textarea",rows:3,value:L(FIRM.scope)}
+ ],onSubmit:async(v)=>{
+  await api("/firm",{method:"PATCH",body:JSON.stringify({...v,
+    partners:+v.partners||0,staff:+v.staff||0,engagements:+v.engagements||0})});
+  await loadAll();render();}});}
+
 const ROLE_KEYS=["owner","admin","quality_lead","manager","staff","viewer"];
+const roleOptions=()=>ROLE_KEYS.map(r=>({value:r,label:t("role_"+r)}));
+
+function openAddUserModal(){
+ openModal({title:t("addUser"),submitLabel:t("save"),fields:[
+  {id:"fullName",label:t("name"),required:true},
+  {id:"username",label:t("user"),required:true},
+  {id:"email",label:t("email"),type:"email"},
+  {id:"password",label:t("pass"),type:"password",required:true},
+  {id:"role",label:t("role"),type:"select",options:roleOptions(),value:"staff"}
+ ],onSubmit:async(v)=>{
+  await api("/users",{method:"POST",body:JSON.stringify(v)});
+  await loadAll();render();}});}
+
+function openEditUserModal(uid){
+ const u=USERS.find(x=>x.id===uid);if(!u)return;
+ openModal({title:t("editUser"),submitLabel:t("save"),fields:[
+  {id:"fullName",label:t("name"),value:L(u.name),required:true},
+  {id:"email",label:t("email"),value:u.email==="—"?"":u.email},
+  {id:"role",label:t("role"),type:"select",options:roleOptions(),value:u.roleSlug},
+  {id:"isActive",label:t("status"),type:"select",value:u.active?"1":"0",
+   options:[{value:"1",label:t("active")},{value:"0",label:t("inactive")}]},
+  {id:"password",label:t("newPasswordOptional"),type:"password",placeholder:t("leaveBlankKeep")}
+ ],onSubmit:async(v)=>{
+  await api("/users/"+uid,{method:"PATCH",body:JSON.stringify({fullName:v.fullName,email:v.email,
+    role:v.role,isActive:v.isActive==="1",password:v.password||undefined})});
+  await loadAll();render();}});}
+
 function viewUsers(){
  const canManage=MY_ROLE==="owner"||MY_ROLE==="admin";
- const rows=USERS.map(u=>{
-  const editing=state.editingUserId===u.id;
-  const editRow=editing?`<tr><td colspan="6"><div class="add-form open" style="margin:6px 0">
-    <div class="form-row">
-     <div class="field"><label>${t("name")}</label><input id="eu-name" value="${esc(L(u.name))}"></div>
-     <div class="field"><label>${t("email")}</label><input id="eu-email" value="${u.email==="—"?"":esc(u.email)}"></div></div>
-    <div class="form-row">
-     <div class="field"><label>${t("role")}</label><select id="eu-role">${ROLE_KEYS.map(r=>`<option value="${r}" ${u.roleSlug===r?"selected":""}>${t("role_"+r)}</option>`).join("")}</select></div>
-     <div class="field"><label>${t("status")}</label><select id="eu-active"><option value="1" ${u.active?"selected":""}>${t("active")}</option><option value="0" ${!u.active?"selected":""}>${t("inactive")}</option></select></div></div>
-    <div class="field"><label>${t("newPasswordOptional")}</label><input id="eu-pass" type="password" placeholder="${t("leaveBlankKeep")}"></div>
-    <div style="display:flex;gap:6px"><button class="btn xs" id="btn-save-user" data-uid="${u.id}">${t("save")}</button><button class="btn ghost xs" id="btn-cancel-user">${t("cancel")}</button></div>
-   </div></td></tr>`:"";
-  return `<tr>
+ const rows=USERS.map(u=>`<tr>
    <td><div style="display:flex;align-items:center;gap:8px"><span class="avatar" style="width:23px;height:23px;font-size:9.5px">${initials(u.name)}</span>${esc(L(u.name))}</div></td>
    <td>${esc(L(u.role))}</td><td class="mono" style="font-size:11px">${u.email}</td><td class="mono num">${u.last}</td>
    <td><span class="badge ${u.active?"b-l":"b-n"}">${u.active?t("active"):t("inactive")}</span></td>
-   <td>${canManage?`<span class="cedit" style="color:var(--muted)" data-edit-user-btn="${u.id}" title="${t("edit")}">✎</span>`:""}</td></tr>${editRow}`;
- }).join("");
- const addForm=(canManage&&state.addingUser)?`<div class="card" style="margin-bottom:12px"><div class="card-b">
-   <div class="form-row">
-    <div class="field"><label>${t("name")}</label><input id="nu-name"></div>
-    <div class="field"><label>${t("user")}</label><input id="nu-username" autocomplete="off"></div></div>
-   <div class="form-row">
-    <div class="field"><label>${t("email")}</label><input id="nu-email" type="email"></div>
-    <div class="field"><label>${t("pass")}</label><input id="nu-pass" type="password"></div></div>
-   <div class="field"><label>${t("role")}</label><select id="nu-role">${ROLE_KEYS.map(r=>`<option value="${r}" ${r==="staff"?"selected":""}>${t("role_"+r)}</option>`).join("")}</select></div>
-   <div style="display:flex;gap:6px"><button class="btn xs" id="btn-save-newuser">${t("save")}</button><button class="btn ghost xs" id="btn-cancel-newuser">${t("cancel")}</button></div>
-  </div></div>`:"";
+   <td>${canManage?`<span class="cedit" style="color:var(--muted)" data-edit-user-btn="${u.id}" title="${t("edit")}">✎</span>`:""}</td></tr>`).join("");
  return printHead(t("usersTitle"))+`
  <div class="page-head"><div><h2>${t("usersTitle")}</h2><p>${t("usersSub")}</p></div>
  <div class="side no-print">${canManage?`<button class="btn xs" id="btn-add-user">+ ${t("addUser")}</button>`:""}<button class="btn ghost xs icobtn" onclick="window.print()" title="${t("print")}">⎙</button></div></div>
- ${addForm}
  <div class="card"><table><thead><tr><th>${t("name")}</th><th>${t("role")}</th><th>${t("email")}</th><th>${t("lastLogin")}</th><th>${t("status")}</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;}
 
 function viewProfile(){const me=P(ME),mine=[];
@@ -978,8 +1076,7 @@ function bind(){
    state.open.has(k)?state.open.delete(k):state.open.add(k);render();});
  v.querySelectorAll("[data-node]").forEach(el=>el.onclick=e=>{e.stopPropagation();const k=el.dataset.node;
    state.sel=k;state.adding=false;state.relink=null;state.open.add(k);render();});
- v.querySelectorAll("[data-quick]").forEach(el=>el.onclick=e=>{e.stopPropagation();const k=el.dataset.quick;
-   state.sel=k;state.wTab="details";state.adding=true;state.relink=null;state.open.add(k);render();});
+ v.querySelectorAll("[data-quick]").forEach(el=>el.onclick=e=>{e.stopPropagation();openAddModal(el.dataset.quick);});
  v.querySelectorAll("[data-wtab]").forEach(el=>el.onclick=()=>{state.wTab=el.dataset.wtab;state.relink=null;render();});
  v.querySelectorAll("[data-relink]").forEach(el=>el.onclick=e=>{e.stopPropagation();const id=+el.dataset.relink;
    state.relink=state.relink===id?null:id;render();});
@@ -1012,89 +1109,15 @@ function bind(){
  if(col)col.onclick=()=>{state.open=new Set();render();};
  const q=document.getElementById("q-search");
  if(q)q.oninput=()=>{state.q=q.value;const p=q.selectionStart;render();const n2=document.getElementById("q-search");if(n2){n2.focus();n2.setSelectionRange(p,p);}};
- const add=document.getElementById("btn-add");if(add)add.onclick=()=>{state.adding=!state.adding;render();};
- const cancel=document.getElementById("btn-cancel");if(cancel)cancel.onclick=()=>{state.adding=false;render();};
- const save=document.getElementById("btn-save");
- if(save)save.onclick=async()=>{
-  const ttl=document.getElementById("f-ttl").value.trim(),txt=document.getElementById("f-text").value.trim();
-  if(!ttl){document.getElementById("f-ttl").focus();return;}
-  const c=ownerOf(state.sel);if(!c)return;const n=findNode(c,state.sel);if(!n)return;
-  const am=ADD_META[kx(n)];if(!am)return;
-  const payload={title:ttl,desc:txt||ttl,status:document.getElementById("f-st").value};
-  payload[am.idField]=n.dbId;
-  if(am.kind!=="res"){const toIdx=+document.getElementById("f-to").value;payload.assignedTo=USERS[toIdx]&&USERS[toIdx].id;}
-  if(am.extra==="type")payload.type=document.getElementById("f-type").value;
-  if(am.extra==="severity")payload.severity=document.getElementById("f-sev").value;
-  try{
-   await api(am.endpoint,{method:"POST",body:JSON.stringify(payload)});
-   await loadAll();
-  }catch(e){alert(e.message);}
-  state.adding=false;render();}
+ v.querySelectorAll("[data-open-add]").forEach(el=>el.onclick=e=>{e.stopPropagation();openAddModal(el.dataset.openAdd);});
+ v.querySelectorAll("[data-open-edit]").forEach(el=>el.onclick=e=>{e.stopPropagation();openEditModal(el.dataset.openEdit);});
  const addObj=document.getElementById("btn-add-obj");
- if(addObj)addObj.onclick=()=>{state.addingObjective=!state.addingObjective;render();};
- const cancelObj=document.getElementById("btn-cancel-obj");
- if(cancelObj)cancelObj.onclick=()=>{state.addingObjective=false;render();};
- const saveObj=document.getElementById("btn-save-obj");
- if(saveObj)saveObj.onclick=async()=>{
-  const ttl=document.getElementById("fo-ttl").value.trim(),txt=document.getElementById("fo-text").value.trim();
-  if(!ttl){document.getElementById("fo-ttl").focus();return;}
-  const list=comps();if(!list[0])return;
-  const toIdx=+document.getElementById("fo-to").value;
-  try{
-   await api("/objectives",{method:"POST",body:JSON.stringify({componentId:list[0].dbId,title:ttl,desc:txt||ttl,
-     standardRef:document.getElementById("fo-ref").value.trim(),ownerId:USERS[toIdx]&&USERS[toIdx].id})});
-   await loadAll();
-  }catch(e){alert(e.message);}
-  state.addingObjective=false;render();};
+ if(addObj)addObj.onclick=()=>openAddObjectiveModal();
  const addUser=document.getElementById("btn-add-user");
- if(addUser)addUser.onclick=()=>{state.addingUser=!state.addingUser;render();};
- const cancelNewUser=document.getElementById("btn-cancel-newuser");
- if(cancelNewUser)cancelNewUser.onclick=()=>{state.addingUser=false;render();};
- const saveNewUser=document.getElementById("btn-save-newuser");
- if(saveNewUser)saveNewUser.onclick=async()=>{
-  const name=document.getElementById("nu-name").value.trim(),username=document.getElementById("nu-username").value.trim(),
-    pass=document.getElementById("nu-pass").value;
-  if(!name||!username||!pass){alert(t("reqFields"));return;}
-  try{
-   await api("/users",{method:"POST",body:JSON.stringify({fullName:name,username,password:pass,
-     email:document.getElementById("nu-email").value.trim(),role:document.getElementById("nu-role").value})});
-   await loadAll();state.addingUser=false;render();
-  }catch(e){alert(e.message);}};
- v.querySelectorAll("[data-edit-user-btn]").forEach(el=>el.onclick=()=>{
-   const id=el.dataset.editUserBtn;state.editingUserId=state.editingUserId===id?null:id;render();});
- const cancelUser=document.getElementById("btn-cancel-user");
- if(cancelUser)cancelUser.onclick=()=>{state.editingUserId=null;render();};
- const saveUser=document.getElementById("btn-save-user");
- if(saveUser)saveUser.onclick=async()=>{
-  const uid=saveUser.dataset.uid;
-  const pass=document.getElementById("eu-pass").value;
-  try{
-   await api("/users/"+uid,{method:"PATCH",body:JSON.stringify({
-     fullName:document.getElementById("eu-name").value.trim(),
-     email:document.getElementById("eu-email").value.trim(),
-     role:document.getElementById("eu-role").value,
-     isActive:document.getElementById("eu-active").value==="1",
-     password:pass||undefined})});
-   await loadAll();state.editingUserId=null;render();
-  }catch(e){alert(e.message);}};
+ if(addUser)addUser.onclick=()=>openAddUserModal();
+ v.querySelectorAll("[data-edit-user-btn]").forEach(el=>el.onclick=()=>openEditUserModal(el.dataset.editUserBtn));
  const editFirm=document.getElementById("btn-edit-firm");
- if(editFirm)editFirm.onclick=()=>{state.editingFirm=!state.editingFirm;render();};
- const saveFirm=document.getElementById("btn-save-firm");
- if(saveFirm)saveFirm.onclick=async()=>{
-  try{
-   await api("/firm",{method:"PATCH",body:JSON.stringify({
-     name:document.getElementById("ef-name").value.trim(),
-     license:document.getElementById("ef-license").value.trim(),
-     cr:document.getElementById("ef-cr").value.trim(),
-     phone:document.getElementById("ef-phone").value.trim(),
-     city:document.getElementById("ef-city").value.trim(),
-     country:document.getElementById("ef-country").value.trim(),
-     partners:+document.getElementById("ef-partners").value||0,
-     staff:+document.getElementById("ef-staff").value||0,
-     engagements:+document.getElementById("ef-engagements").value||0,
-     scope:document.getElementById("ef-scope").value.trim()})});
-   await loadAll();state.editingFirm=false;render();
-  }catch(e){alert(e.message);}};}
+ if(editFirm)editFirm.onclick=()=>openEditFirmModal();}
 
 async function sendMsg(){
  const inp=document.getElementById("c-in");if(!inp)return;
