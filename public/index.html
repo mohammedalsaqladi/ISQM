@@ -446,7 +446,7 @@ function fmtScope(compId,code){
  return code?nodeTitle(compId,code):L(compById(compId))+" — "+t("generalChat");}
 
 /* ---------------- state ---------------- */
-let state={page:"home",comp:DATA[0].id,sel:null,q:"",adding:false,open:new Set(),navOpen:true,wTab:"details",cComp:"all",cNode:"all",relink:null,draft:""};
+let state={page:"home",comp:"all",sel:null,q:"",adding:false,open:new Set(),navOpen:true,wTab:"details",cComp:"all",cNode:"all",relink:null,draft:""};
 
 function setLang(l){lang=l;document.body.dir=T[l].dir;document.documentElement.lang=l;document.documentElement.dir=T[l].dir;
  paintLogin();if(document.getElementById("app").style.display==="block"){paintChrome();render();}}
@@ -843,7 +843,8 @@ document.getElementById("btn-print").onclick=()=>window.print();
 document.getElementById("btn-logout").onclick=()=>{TOKEN=null;localStorage.removeItem("isqm_token");
  document.getElementById("app").style.display="none";
  document.getElementById("login").style.display="grid";
- state={page:"home",comp:DATA[0].id,sel:null,q:"",adding:false,open:new Set(),navOpen:true};};
+ DATA.length=0;CHAT.length=0;USERS.length=0;PEOPLE.length=0;ME=0;
+ state={page:"home",comp:"all",sel:null,q:"",adding:false,open:new Set(),navOpen:true,wTab:"details",cComp:"all",cNode:"all",relink:null,draft:""};};
 paintLogin();
 if(TOKEN){enterApp().catch(()=>{TOKEN=null;localStorage.removeItem("isqm_token");});}
 </script>
