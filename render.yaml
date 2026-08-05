@@ -10,7 +10,7 @@ services:
     runtime: node
     plan: free
     region: frankfurt          # غيّرها إن أردت: oregon / ohio / singapore
-    buildCommand: npm install && npm run migrate && npm run seed
+    buildCommand: npm install && npm run migrate
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
