@@ -1,0 +1,30 @@
+databases:
+  - name: isqm-db
+    databaseName: isqm
+    plan: free
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: isqm-system
+    runtime: node
+    plan: free
+    region: frankfurt          # غيّرها إن أردت: oregon / ohio / singapore
+    buildCommand: npm install && npm run migrate
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: isqm-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_VERSION
+        value: "20"
+      - key: SEED_FIRM_CODE
+        value: ISQM-001
+      - key: SEED_ADMIN_USER
+        value: admin
+      - key: SEED_ADMIN_PASS
+        sync: false            # ضعها يدوياً في لوحة Render
