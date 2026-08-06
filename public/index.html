@@ -179,9 +179,17 @@ body[dir="rtl"] .tcar span{display:inline-block;transform:rotate(180deg)}
 .tmeta{font-size:9.2px;color:#93A5AA;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .tgrp{font-size:10px;color:var(--ink);font-weight:700;padding:8px 6px 4px;margin-top:5px;border-top:1px solid var(--line);display:flex;gap:6px;align-items:center}
 .tgrp:first-child{border-top:0;margin-top:0}
-.tlegend{display:flex;gap:10px;flex-wrap:wrap;padding:6px 9px;border-bottom:1px solid var(--line);font-size:9.5px;color:var(--muted)}
+.tlegend{display:flex;gap:6px;flex-wrap:wrap;padding:6px 9px;border-bottom:1px solid var(--line);font-size:9.5px;color:var(--muted)}
 .tlegend span{display:flex;align-items:center;gap:4px}
 .tlegend b{font-size:14px;font-weight:400}
+.lgf{cursor:pointer;border:1px solid transparent;border-radius:99px;padding:2px 7px;background:#F6F8F8;transition:background .12s,border-color .12s;user-select:none}
+.lgf:hover{background:#EDF2F1}
+.lgf.on{background:#fff;font-weight:600;box-shadow:0 0 0 1px currentColor inset}
+.lgn{font-style:normal;font-variant-numeric:tabular-nums;opacity:.65;font-size:9px}
+.lgclear{cursor:pointer;border-radius:99px;padding:2px 8px;background:var(--high-bg);color:var(--high);font-weight:600}
+.lgclear:hover{background:#F7DAD7}
+.trow.dim{opacity:.42}
+.trow.dim:hover{opacity:.85}
 /* workspace tabs + chat */
 .wtabs{display:flex;gap:2px;padding:0 10px;border-bottom:1px solid var(--line)}
 .wtab{padding:8px 12px;font-size:11.8px;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;display:flex;align-items:center;gap:5px}
@@ -359,7 +367,7 @@ riskLevel:"درجة الخطورة",owner:"موجهة إلى",createdBy:"أنش�
 addResponse:"إضافة استجابة",cancel:"إلغاء",save:"حفظ",respText:"وصف الاستجابة",respTitle:"عنوان الاستجابة",assignTo:"موجهة إلى",respType:"النوع",
 noResp:"لا توجد استجابات بعد.",noRes:"لا توجد نتائج مسجلة.",noTest:"لا توجد اختبارات بعد.",
 objective:"هدف",risk:"خطر",response:"استجابة",test:"اختبار",result:"نتيجة",
-addTest:"إضافة اختبار",addResult:"إضافة نتيجة",addRisk:"إضافة خطر",addObjective:"إضافة هدف",testTitle:"عنوان الاختبار",testText:"وصف الاختبار",resultTitle:"عنوان النتيجة",resultText:"وصف النتيجة",riskTitle:"عنوان الخطر",riskText:"وصف الخطر",objTitle:"عنوان الهدف",objText:"وصف الهدف",itemsCount:"عدد العناصر",noRisk:"لا توجد مخاطر بعد.",
+addTest:"إضافة اختبار",addResult:"إضافة نتيجة",addRisk:"إضافة خطر",addObjective:"إضافة هدف",testTitle:"عنوان الاختبار",testText:"وصف الاختبار",resultTitle:"عنوان النتيجة",resultText:"وصف النتيجة",riskTitle:"عنوان الخطر",riskText:"وصف الخطر",objTitle:"عنوان الهدف",objText:"وصف الهدف",itemsCount:"عدد العناصر",filterBy:"تصفية حسب",clearFilter:"إلغاء التصفية",noRisk:"لا توجد مخاطر بعد.",
 planned:"مخطط",testInprogress:"قيد التنفيذ",completed:"مكتمل",ineffective:"غير فعّالة",
 downloadTemplate:"⭳ قالب الاستيراد",addComponent:"مكوّن جديد",edit:"تعديل",
 componentName:"اسم المكوّن",componentSlug:"معرّف المكوّن (إنجليزي، بدون مسافات)",editComponent:"تعديل المكوّن",editUser:"تعديل المستخدم",
@@ -396,7 +404,7 @@ riskLevel:"Risk level",owner:"Assigned to",createdBy:"Created by",date:"Date",ti
 addResponse:"Add response",cancel:"Cancel",save:"Save",respText:"Response description",respTitle:"Response title",assignTo:"Assign to",respType:"Type",
 noResp:"No responses yet.",noRes:"No results recorded.",noTest:"No tests yet.",
 objective:"Objective",risk:"Risk",response:"Response",test:"Test",result:"Result",
-addTest:"Add test",addResult:"Add result",addRisk:"Add risk",addObjective:"Add objective",testTitle:"Test title",testText:"Test description",resultTitle:"Result title",resultText:"Result description",riskTitle:"Risk title",riskText:"Risk description",objTitle:"Objective title",objText:"Objective description",itemsCount:"Item counts",noRisk:"No risks yet.",
+addTest:"Add test",addResult:"Add result",addRisk:"Add risk",addObjective:"Add objective",testTitle:"Test title",testText:"Test description",resultTitle:"Result title",resultText:"Result description",riskTitle:"Risk title",riskText:"Risk description",objTitle:"Objective title",objText:"Objective description",itemsCount:"Item counts",filterBy:"Filter by",clearFilter:"Clear filter",noRisk:"No risks yet.",
 planned:"Planned",testInprogress:"In progress",completed:"Completed",ineffective:"Ineffective",
 downloadTemplate:"⭳ Import template",addComponent:"New component",edit:"Edit",
 componentName:"Component name",componentSlug:"Component slug (English, no spaces)",editComponent:"Edit component",editUser:"Edit user",
@@ -702,7 +710,7 @@ function fmtScope(compId,code){
  return code?nodeTitle(compId,code):L(compById(compId))+" — "+t("generalChat");}
 
 /* ---------------- state ---------------- */
-let state={page:"home",comp:"all",sel:null,q:"",adding:false,addingObjective:false,addingUser:false,editingUserId:null,editingFirm:false,open:new Set(),navOpen:true,wTab:"details",cComp:"all",cNode:"all",relink:null,draft:""};
+let state={page:"home",comp:"all",sel:null,q:"",kinds:new Set(),adding:false,addingObjective:false,addingUser:false,editingUserId:null,editingFirm:false,open:new Set(),navOpen:true,wTab:"details",cComp:"all",cNode:"all",relink:null,draft:""};
 
 function setLang(l){lang=l;document.body.dir=T[l].dir;document.documentElement.lang=l;document.documentElement.dir=T[l].dir;
  paintLogin();if(document.getElementById("app").style.display==="block"){paintChrome();render();}}
@@ -814,15 +822,25 @@ function viewHome(){
    <div class="legend" style="justify-content:center"><span><i class="dot l"></i>${t("done")} (${s.done})</span><span><i class="dot t"></i>${t("inprog")} (${s.inprog})</span><span><i class="dot h"></i>${t("late")} (${s.late})</span></div></div></div></div>`;}
 
 function nodeMatches(n,q){return L(n.t).toLowerCase().includes(q)||L(n.d).toLowerCase().includes(q)||n.code.toLowerCase().includes(q);}
-function subtreeMatches(n,q){return !q||nodeMatches(n,q)||n.kids.some(k=>subtreeMatches(k,q));}
+/* الفلترة بالنوع: البند يظهر إذا كان نوعه مُحدداً، أو إذا كان أحد أبنائه مطابقاً
+   (حتى يبقى المسار الهرمي المؤدي إليه ظاهراً بدل أن تنقطع الشجرة). */
+function kindSelected(n){return !state.kinds.size||state.kinds.has(kx(n));}
+function subtreeMatches(n,q){
+ const self=(!q||nodeMatches(n,q))&&kindSelected(n);
+ return self||n.kids.some(k=>subtreeMatches(k,q));}
+/* هل البند نفسه مطابق (يُستخدم لتخفيت البنود الوسيطة غير المطابقة) */
+function selfMatches(n,q){return (!q||nodeMatches(n,q))&&kindSelected(n);}
 
 function treeNode(n,q,cid){
- const has=n.kids.length>0,op=state.open.has(n.code)||(q&&has);
+ const has=n.kids.length>0;
+ const filtering=!!q||state.kinds.size>0;
+ const op=state.open.has(n.code)||(filtering&&has);
  const kids=has&&op?`<div class="tkids">${n.kids.filter(k=>subtreeMatches(k,q)).map(k=>treeNode(k,q,cid)).join("")}</div>`:"";
  const meta=`${esc(L(n.by))} · <span class="mono num">${n.date} · ${n.time}</span>`;
  const nk=kx(n);
+ const dim=filtering&&!selfMatches(n,q)?" dim":"";
  return `<div class="tnode">
-  <div class="trow k-${nk} ${state.sel===n.code?"sel":""}" data-node="${n.code}">
+  <div class="trow k-${nk}${dim} ${state.sel===n.code?"sel":""}" data-node="${n.code}">
    <span class="tcar" data-car="${n.code}">${has?`<span class="${op?"open":""}">▶</span>`:""}</span>
    <span class="tico" style="color:${kindColor(n)}">${ICON[nk]}</span>
    <span class="tmain">
@@ -840,7 +858,12 @@ function viewQuality(){
    if(!inner)return "";
    return (all?`<div class="tgrp"><span class="mono" style="color:var(--muted)">${c.num}</span> ${esc(L(c))}</div>`:"")+inner;
  }).join("")||`<div class="tempty">—</div>`;
- const legend=`<div class="tlegend"><span style="color:var(--teal)"><b>◎</b> ${t("objectives")}</span><span style="color:var(--high)"><b>⚠</b> ${t("risks")}</span><span style="color:var(--violet)"><b>➜</b> ${t("responses")}</span><span style="color:var(--med)"><b>▣</b> ${t("tests")}</span><span style="color:var(--low)"><b>✔</b> ${t("results")}</span></div>`;
+ const legendItems=[["obj","◎","var(--teal)","objectives"],["risk","⚠","var(--high)","risks"],
+   ["resp","➜","var(--violet)","responses"],["test","▣","var(--med)","tests"],["res","✔","var(--low)","results"]];
+ const legend=`<div class="tlegend">${legendItems.map(([k,ic,col,lbl])=>{
+   const on=state.kinds.has(k);
+   return `<span class="lgf${on?" on":""}" data-kind="${k}" style="${on?`color:${col};border-color:${col}`:`color:${col}`}" title="${t("filterBy")}: ${t(lbl)}"><b>${ic}</b> ${t(lbl)} <i class="lgn">${st[{obj:"ob",risk:"rk",resp:"rs",test:"ts",res:"rx"}[k]]}</i></span>`;
+  }).join("")}${state.kinds.size?`<span class="lgclear" id="lg-clear">✕ ${t("clearFilter")}</span>`:""}</div>`;
  const canManage=MY_ROLE==="owner"||MY_ROLE==="admin";
  const backupBtns=canManage?`<button class="btn ghost xs icobtn" onclick="downloadTemplate()" title="${t("downloadTemplate")}">⧉</button>
   <button class="btn ghost xs icobtn" onclick="doExport()" title="${t("exportData")}">⭳</button>
@@ -1107,6 +1130,12 @@ function bind(){
  if(exp)exp.onclick=()=>{comps().forEach(c=>walk(c,n=>{if(n.kids.length)state.open.add(n.code);}));render();};
  const col=document.getElementById("btn-col");
  if(col)col.onclick=()=>{state.open=new Set();render();};
+ v.querySelectorAll("[data-kind]").forEach(el=>el.onclick=()=>{
+   const k=el.dataset.kind;
+   state.kinds.has(k)?state.kinds.delete(k):state.kinds.add(k);
+   state.sel=null;render();});
+ const lgc=document.getElementById("lg-clear");
+ if(lgc)lgc.onclick=()=>{state.kinds=new Set();render();};
  const q=document.getElementById("q-search");
  if(q)q.oninput=()=>{state.q=q.value;const p=q.selectionStart;render();const n2=document.getElementById("q-search");if(n2){n2.focus();n2.setSelectionRange(p,p);}};
  v.querySelectorAll("[data-open-add]").forEach(el=>el.onclick=e=>{e.stopPropagation();openAddModal(el.dataset.openAdd);});
@@ -1199,7 +1228,7 @@ document.getElementById("btn-logout").onclick=()=>{TOKEN=null;localStorage.remov
  document.getElementById("app").style.display="none";
  document.getElementById("login").style.display="grid";
  DATA.length=0;CHAT.length=0;USERS.length=0;PEOPLE.length=0;ME=0;
- state={page:"home",comp:"all",sel:null,q:"",adding:false,addingObjective:false,addingUser:false,editingUserId:null,editingFirm:false,open:new Set(),navOpen:true,wTab:"details",cComp:"all",cNode:"all",relink:null,draft:""};};
+ state={page:"home",comp:"all",sel:null,q:"",kinds:new Set(),adding:false,addingObjective:false,addingUser:false,editingUserId:null,editingFirm:false,open:new Set(),navOpen:true,wTab:"details",cComp:"all",cNode:"all",relink:null,draft:""};};
 paintLogin();
 if(TOKEN){enterApp().catch(()=>{TOKEN=null;localStorage.removeItem("isqm_token");});}
 </script>
