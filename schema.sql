@@ -307,22 +307,24 @@ CREATE INDEX idx_attachments_item ON attachments(item_kind, item_id);
 -- ---------------------------------------------------------------------
 -- 13. CHAT MESSAGES  (الدردشة المرتبطة بالبنود)
 -- ---------------------------------------------------------------------
+-- المعرّف رقمي متسلسل لأن الواجهة تتعامل مع أرقام الرسائل، و sender_id هو المرسل.
 CREATE TABLE chat_messages (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id            BIGSERIAL PRIMARY KEY,
     company_id    UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     component_id  UUID REFERENCES components(id) ON DELETE CASCADE,
     item_kind     item_kind,
     item_id       UUID,
-    item_code     VARCHAR(20),
-    user_id       UUID REFERENCES users(id) ON DELETE SET NULL,
+    sender_id     UUID REFERENCES users(id) ON DELETE SET NULL,
     body          TEXT NOT NULL,
+    deleted_at    TIMESTAMPTZ,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_chat_company ON chat_messages(company_id, created_at);
+CREATE INDEX idx_chat_sender ON chat_messages(sender_id);
 
 CREATE TABLE chat_reads (
     user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    message_id   UUID NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
+    message_id   BIGINT NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
     read_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (user_id, message_id)
 );
@@ -369,18 +371,18 @@ GROUP BY   c.id;
 CREATE OR REPLACE VIEW v_unread_by_component AS
 SELECT u.id AS user_id, m.component_id, COUNT(*) AS unread
 FROM   users u
-JOIN   chat_messages m ON m.company_id = u.company_id AND m.user_id <> u.id
+JOIN   chat_messages m ON m.company_id = u.company_id AND m.sender_id <> u.id AND m.deleted_at IS NULL
 LEFT   JOIN chat_reads r ON r.message_id = m.id AND r.user_id = u.id
 WHERE  r.message_id IS NULL
 GROUP BY u.id, m.component_id;
 
 CREATE OR REPLACE VIEW v_unread_by_item AS
-SELECT u.id AS user_id, m.component_id, m.item_code, COUNT(*) AS unread
+SELECT u.id AS user_id, m.component_id, m.item_kind, m.item_id, COUNT(*) AS unread
 FROM   users u
-JOIN   chat_messages m ON m.company_id = u.company_id AND m.user_id <> u.id
+JOIN   chat_messages m ON m.company_id = u.company_id AND m.sender_id <> u.id AND m.deleted_at IS NULL
 LEFT   JOIN chat_reads r ON r.message_id = m.id AND r.user_id = u.id
 WHERE  r.message_id IS NULL
-GROUP BY u.id, m.component_id, m.item_code;
+GROUP BY u.id, m.component_id, m.item_kind, m.item_id;
 
 -- ---------------------------------------------------------------------
 -- 16. TRIGGER  (تحديث updated_at تلقائياً)

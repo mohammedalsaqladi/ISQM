@@ -340,7 +340,7 @@ body[dir="rtl"] .grp-car.open{transform:rotate(90deg)}
   </div>
   <div class="login-card" id="signup-card" style="display:none">
     <h2 id="su-h2"></h2><p class="sub" id="su-sub"></p>
-    <div class="field"><label id="su-lb-code"></label><input id="su-code" autocomplete="off"></div>
+    <div class="field"><label id="su-lb-code"></label><input id="su-code" autocomplete="off"><div id="su-code-hint" style="font-size:11px;margin-top:4px;display:none"></div></div>
     <div class="field"><label id="su-lb-firm"></label><input id="su-firm"></div>
     <div class="field"><label id="su-lb-cr"></label><input id="su-cr"></div>
     <div class="field"><label id="su-lb-city"></label><input id="su-city"></div>
@@ -423,7 +423,7 @@ role_owner:"مالك",role_admin:"مشرف",role_quality_lead:"مسؤول الج
 firmName:"اسم المكتب",license:"رقم الترخيص",cr:"السجل التجاري",city:"المدينة",country:"الدولة",phone:"الهاتف",partners:"الشركاء",staff:"الموظفون",engagements:"الارتباطات",scope:"النطاق",period:"فترة النظام",respScope:"المسؤول النهائي",opRespScope:"المسؤول التشغيلي",
 printedAt:"تاريخ الطباعة",assignedToMe:"موكلة إليّ",type_prev:"وقائية",type_det:"كاشفة",type_mon:"رقابية",
 open:"مفتوح",closed:"مغلق",monitored:"تحت المراقبة",effective:"فعّالة",partial:"فعّالة جزئياً",expand:"توسيع الكل",collapse:"طي الكل",components:"المكوّنات",allComp:"جميع المكوّنات",chat:"الدردشة",details:"التفاصيل",sendPh:"اكتب رسالة...",send:"إرسال",linkedTo:"مرتبطة بـ",changeLink:"تعديل الربط",allItems:"جميع العناصر",generalChat:"دردشة عامة على المكوّن",chatSub:"دردشة الفريق مرتبطة ببنود نظام الجودة.",noMsgs:"لا توجد رسائل بعد — ابدأ المحادثة.",unreadSep:"رسائل غير مقروءة",unread:"غير مقروءة",scope:"نطاق الدردشة",apply:"تطبيق",signup:"إنشاء حساب شركة جديدة",backLogin:"العودة لتسجيل الدخول",newAccount:"حساب شركة جديدة",newAccountSub:"سجّل مكتبك للبدء في نظام إدارة الجودة.",adminName:"اسم المسؤول",createAcc:"إنشاء الحساب",accCreated:"تم إنشاء الحساب بنجاح — كود الشركة:",reqFields:"الرجاء تعبئة الحقول المطلوبة.",confirmPass:"تأكيد كلمة المرور",passMismatch:"كلمتا المرور غير متطابقتين.",
-schemaProblem:"بنية قاعدة البيانات غير مكتملة:",schemaFix:"الحل: شغّل ملف schema.sql كاملاً بمحرر قاعدة البيانات، ثم حدّث الصفحة.",chooseFirmCode:"كود الشركة (تختاره أنت لتسجيل الدخول لاحقاً)",codeFormat:"كود الشركة يجب أن يكون 2-20 حرف/رقم إنجليزي فقط (بدون مسافات).",codeTaken:"هذا الكود مستخدم مسبقاً، اختر كوداً آخر.",
+schemaProblem:"بنية قاعدة البيانات غير مكتملة:",schemaFix:"الحل: شغّل ملف schema.sql كاملاً بمحرر قاعدة البيانات، ثم حدّث الصفحة.",chooseFirmCode:"كود الشركة (تختاره أنت لتسجيل الدخول لاحقاً)",codeFormat:"كود الشركة يجب أن يكون 2-20 حرف/رقم إنجليزي فقط (بدون مسافات).",codeTaken:"هذا الكود مستخدم مسبقاً",codeFree:"الكود متاح",userTaken:"اسم المستخدم مستخدم مسبقاً بهذه الشركة.",regInProgress:"هناك محاولة تسجيل جارية بنفس الطلب — انتظر لحظات ثم أعد المحاولة.",codeTakenFull:"هذا الكود مسجّل مسبقاً لشركة أخرى. اختر كوداً مختلفاً، أو إن كانت هذه شركتك فاستخدم شاشة تسجيل الدخول بنفس الكود بدل إنشاء حساب جديد.",
 exportData:"⭳ تصدير نسخة احتياطية",importData:"⭱ استيراد نسخة احتياطية",
 importConfirm:"سيستبدل الاستيراد كامل الأهداف والمخاطر والاستجابات والنتائج الحالية بمحتوى الملف. هل تريد المتابعة؟",
 importedOk:"تم الاستيراد بنجاح.",importFailed:"فشل الاستيراد",xlsxLoadError:"تعذّر تحميل مكتبة قراءة الإكسل — تحقق من الاتصال بالإنترنت وحاول مجدداً.",
@@ -473,7 +473,7 @@ role_owner:"Owner",role_admin:"Admin",role_quality_lead:"Quality lead",role_mana
 firmName:"Firm name",license:"License no.",cr:"CR number",city:"City",country:"Country",phone:"Phone",partners:"Partners",staff:"Staff",engagements:"Engagements",scope:"Scope",period:"System period",respScope:"Ultimate responsibility",opRespScope:"Operational responsibility",
 printedAt:"Printed on",assignedToMe:"Assigned to me",type_prev:"Preventive",type_det:"Detective",type_mon:"Monitoring",
 open:"Open",closed:"Closed",monitored:"Monitored",effective:"Effective",partial:"Partly effective",expand:"Expand all",collapse:"Collapse all",components:"Components",allComp:"All components",chat:"Chat",details:"Details",sendPh:"Type a message...",send:"Send",linkedTo:"Linked to",changeLink:"Change link",allItems:"All items",generalChat:"General component chat",chatSub:"Team chat linked to quality system items.",noMsgs:"No messages yet — start the conversation.",unreadSep:"Unread messages",unread:"Unread",scope:"Chat scope",apply:"Apply",signup:"Create a new firm account",backLogin:"Back to sign in",newAccount:"New firm account",newAccountSub:"Register your firm to start using the system.",adminName:"Administrator name",createAcc:"Create account",accCreated:"Account created — firm code:",reqFields:"Please fill in the required fields.",confirmPass:"Confirm password",passMismatch:"Passwords do not match.",
-schemaProblem:"Database schema is incomplete:",schemaFix:"Fix: run the full schema.sql in your database editor, then refresh this page.",chooseFirmCode:"Firm code (you choose it, used to sign in later)",codeFormat:"Firm code must be 2-20 English letters/digits only (no spaces).",codeTaken:"This code is already taken, choose another one.",
+schemaProblem:"Database schema is incomplete:",schemaFix:"Fix: run the full schema.sql in your database editor, then refresh this page.",chooseFirmCode:"Firm code (you choose it, used to sign in later)",codeFormat:"Firm code must be 2-20 English letters/digits only (no spaces).",codeTaken:"This code is already taken",codeFree:"Code is available",userTaken:"This username is already used in this firm.",regInProgress:"A registration for this request is already in progress — wait a moment and try again.",codeTakenFull:"This code is already registered to another firm. Choose a different code, or if this is your firm, sign in with it instead of creating a new account.",
 exportData:"⭳ Export backup",importData:"⭱ Import backup",
 importConfirm:"Importing will replace all current objectives, risks, responses and results with the file's content. Continue?",
 importedOk:"Import completed successfully.",importFailed:"Import failed",xlsxLoadError:"Could not load the Excel reading library — check your internet connection and try again.",
@@ -1390,7 +1390,12 @@ document.getElementById("btn-create").onclick=async()=>{
   await enterApp();
   setTimeout(()=>alert(t("accCreated")+" "+r.firmCode+"\n"+t("user")+": "+user),150);
  }catch(e){
-  err.textContent=e.message==="firm_code_taken"?t("codeTaken"):e.message==="invalid_firm_code"?t("codeFormat"):e.message;
+  const c=e.code||e.message;
+  err.textContent=c==="code_taken"?t("codeTakenFull")
+    :c==="invalid_code"?t("codeFormat")
+    :c==="username_taken"?t("userTaken")
+    :c==="registration_in_progress"?t("regInProgress")
+    :(e.message||String(e));
   err.style.display="block";
  }
  finally{btn.disabled=false;SIGNUP_IDEM_KEY=null;}};
@@ -1417,6 +1422,24 @@ async function checkSchema(){
       +`<br><br>${t("schemaFix")}`;
     box.style.display="block";}}
  }catch(e){/* تجاهل: لا نعطّل الواجهة إذا فشل الفحص */}}
+
+/* فحص فوري لتوفّر كود الشركة أثناء الكتابة */
+let codeCheckTimer=null;
+const codeInput=document.getElementById("su-code");
+if(codeInput)codeInput.addEventListener("input",()=>{
+ clearTimeout(codeCheckTimer);
+ const hint=document.getElementById("su-code-hint");
+ const v=codeInput.value.trim();
+ if(!v){hint.style.display="none";return;}
+ codeCheckTimer=setTimeout(async()=>{
+  try{
+   const d=await fetch("/api/auth/code-available?code="+encodeURIComponent(v)).then(r=>r.json());
+   hint.style.display="block";
+   if(!d.valid){hint.textContent=t("codeFormat");hint.style.color="var(--high)";}
+   else if(d.available){hint.textContent="✓ "+t("codeFree");hint.style.color="var(--low)";}
+   else{hint.textContent="✕ "+t("codeTaken");hint.style.color="var(--high)";}
+  }catch(e){hint.style.display="none";}
+ },350);});
 
 paintLogin();
 checkSchema();

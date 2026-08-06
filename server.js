@@ -72,8 +72,10 @@ app.get('/api/diag', wrap(async (_req, res) => {
     responses: ['id', 'company_id', 'risk_id'],
     tests: ['id', 'company_id', 'response_id'],
     results: ['id', 'company_id', 'test_id'],
-    chat_messages: ['id', 'company_id'],
-    activity_log: ['id', 'company_id']
+    chat_messages: ['id', 'company_id', 'component_id', 'sender_id', 'body', 'deleted_at'],
+    chat_reads: ['user_id', 'message_id'],
+    attachments: ['id', 'company_id', 'item_kind', 'item_id'],
+    activity_log: ['id', 'company_id', 'user_id', 'action']
   };
   const r = await query(
     `SELECT table_name, column_name FROM information_schema.columns WHERE table_schema='public'`);
@@ -161,6 +163,16 @@ const BASE_COMPONENTS = [
   ['ra', 8, 'عملية تقييم المخاطر', 'Risk Assessment Process']
 ];
 
+// التحقق من توفّر كود الشركة قبل الإرسال، حتى يعرف المستخدم فوراً أن الكود محجوز
+// بدل أن يكتشف ذلك بعد تعبئة النموذج كاملاً.
+app.get('/api/auth/code-available', wrap(async (req, res) => {
+  const code = String(req.query.code || '').trim().toUpperCase();
+  if (!/^[A-Z0-9_-]{2,20}$/.test(code))
+    return res.json({ code, valid: false, available: false, reason: 'invalid_format' });
+  const r = await query('SELECT 1 FROM companies WHERE code=$1', [code]);
+  res.json({ code, valid: true, available: r.rowCount === 0 });
+}));
+
 app.post('/api/auth/register', wrap(async (req, res) => {
   const { firmName, firmCode, cr, city, adminName, email, username, password, idemKey } = req.body || {};
   if (!firmName || !adminName || !username || !password || !firmCode)
@@ -169,6 +181,12 @@ app.post('/api/auth/register', wrap(async (req, res) => {
   const code = String(firmCode).trim().toUpperCase();
   if (!/^[A-Z0-9_-]{2,20}$/.test(code))
     return res.status(400).json({ error: 'invalid_code' }); // 2-20 حرف/رقم إنجليزي، بدون مسافات
+
+  // تنظيف أي أقفال معلّقة من محاولات انقطعت قبل أن تكتمل (أقدم من 5 دقائق)،
+  // وإلا بقي المفتاح محجوزاً ومنع إعادة المحاولة نهائياً.
+  await query(
+    `DELETE FROM registration_attempts
+      WHERE company_id IS NULL AND created_at < now() - interval '5 minutes'`);
 
   // ---- منع التكرار: نقرة مزدوجة / إعادة إرسال لنفس الطلب لا تُنشئ شركة ثانية.
   // نقفل مفتاح idemKey أولاً داخل نفس المعاملة (transaction)؛ لو كان محجوزاً
