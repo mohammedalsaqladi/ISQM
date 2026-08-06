@@ -423,7 +423,7 @@ role_owner:"مالك",role_admin:"مشرف",role_quality_lead:"مسؤول الج
 firmName:"اسم المكتب",license:"رقم الترخيص",cr:"السجل التجاري",city:"المدينة",country:"الدولة",phone:"الهاتف",partners:"الشركاء",staff:"الموظفون",engagements:"الارتباطات",scope:"النطاق",period:"فترة النظام",respScope:"المسؤول النهائي",opRespScope:"المسؤول التشغيلي",
 printedAt:"تاريخ الطباعة",assignedToMe:"موكلة إليّ",type_prev:"وقائية",type_det:"كاشفة",type_mon:"رقابية",
 open:"مفتوح",closed:"مغلق",monitored:"تحت المراقبة",effective:"فعّالة",partial:"فعّالة جزئياً",expand:"توسيع الكل",collapse:"طي الكل",components:"المكوّنات",allComp:"جميع المكوّنات",chat:"الدردشة",details:"التفاصيل",sendPh:"اكتب رسالة...",send:"إرسال",linkedTo:"مرتبطة بـ",changeLink:"تعديل الربط",allItems:"جميع العناصر",generalChat:"دردشة عامة على المكوّن",chatSub:"دردشة الفريق مرتبطة ببنود نظام الجودة.",noMsgs:"لا توجد رسائل بعد — ابدأ المحادثة.",unreadSep:"رسائل غير مقروءة",unread:"غير مقروءة",scope:"نطاق الدردشة",apply:"تطبيق",signup:"إنشاء حساب شركة جديدة",backLogin:"العودة لتسجيل الدخول",newAccount:"حساب شركة جديدة",newAccountSub:"سجّل مكتبك للبدء في نظام إدارة الجودة.",adminName:"اسم المسؤول",createAcc:"إنشاء الحساب",accCreated:"تم إنشاء الحساب بنجاح — كود الشركة:",reqFields:"الرجاء تعبئة الحقول المطلوبة.",confirmPass:"تأكيد كلمة المرور",passMismatch:"كلمتا المرور غير متطابقتين.",
-chooseFirmCode:"كود الشركة (تختاره أنت لتسجيل الدخول لاحقاً)",codeFormat:"كود الشركة يجب أن يكون 3-20 حرف/رقم إنجليزي فقط (بدون مسافات).",codeTaken:"هذا الكود مستخدم مسبقاً، اختر كوداً آخر.",
+schemaProblem:"بنية قاعدة البيانات غير مكتملة:",schemaFix:"الحل: شغّل ملف schema.sql كاملاً بمحرر قاعدة البيانات، ثم حدّث الصفحة.",chooseFirmCode:"كود الشركة (تختاره أنت لتسجيل الدخول لاحقاً)",codeFormat:"كود الشركة يجب أن يكون 2-20 حرف/رقم إنجليزي فقط (بدون مسافات).",codeTaken:"هذا الكود مستخدم مسبقاً، اختر كوداً آخر.",
 exportData:"⭳ تصدير نسخة احتياطية",importData:"⭱ استيراد نسخة احتياطية",
 importConfirm:"سيستبدل الاستيراد كامل الأهداف والمخاطر والاستجابات والنتائج الحالية بمحتوى الملف. هل تريد المتابعة؟",
 importedOk:"تم الاستيراد بنجاح.",importFailed:"فشل الاستيراد",xlsxLoadError:"تعذّر تحميل مكتبة قراءة الإكسل — تحقق من الاتصال بالإنترنت وحاول مجدداً.",
@@ -473,7 +473,7 @@ role_owner:"Owner",role_admin:"Admin",role_quality_lead:"Quality lead",role_mana
 firmName:"Firm name",license:"License no.",cr:"CR number",city:"City",country:"Country",phone:"Phone",partners:"Partners",staff:"Staff",engagements:"Engagements",scope:"Scope",period:"System period",respScope:"Ultimate responsibility",opRespScope:"Operational responsibility",
 printedAt:"Printed on",assignedToMe:"Assigned to me",type_prev:"Preventive",type_det:"Detective",type_mon:"Monitoring",
 open:"Open",closed:"Closed",monitored:"Monitored",effective:"Effective",partial:"Partly effective",expand:"Expand all",collapse:"Collapse all",components:"Components",allComp:"All components",chat:"Chat",details:"Details",sendPh:"Type a message...",send:"Send",linkedTo:"Linked to",changeLink:"Change link",allItems:"All items",generalChat:"General component chat",chatSub:"Team chat linked to quality system items.",noMsgs:"No messages yet — start the conversation.",unreadSep:"Unread messages",unread:"Unread",scope:"Chat scope",apply:"Apply",signup:"Create a new firm account",backLogin:"Back to sign in",newAccount:"New firm account",newAccountSub:"Register your firm to start using the system.",adminName:"Administrator name",createAcc:"Create account",accCreated:"Account created — firm code:",reqFields:"Please fill in the required fields.",confirmPass:"Confirm password",passMismatch:"Passwords do not match.",
-chooseFirmCode:"Firm code (you choose it, used to sign in later)",codeFormat:"Firm code must be 3-20 English letters/digits only (no spaces).",codeTaken:"This code is already taken, choose another one.",
+schemaProblem:"Database schema is incomplete:",schemaFix:"Fix: run the full schema.sql in your database editor, then refresh this page.",chooseFirmCode:"Firm code (you choose it, used to sign in later)",codeFormat:"Firm code must be 2-20 English letters/digits only (no spaces).",codeTaken:"This code is already taken, choose another one.",
 exportData:"⭳ Export backup",importData:"⭱ Import backup",
 importConfirm:"Importing will replace all current objectives, risks, responses and results with the file's content. Continue?",
 importedOk:"Import completed successfully.",importFailed:"Import failed",xlsxLoadError:"Could not load the Excel reading library — check your internet connection and try again.",
@@ -504,7 +504,13 @@ async function api(path,opts={}){
   headers:{"Content-Type":"application/json",...(TOKEN?{Authorization:"Bearer "+TOKEN}:{}),...(opts.headers||{})}});
  if(res.status===401){TOKEN=null;localStorage.removeItem("isqm_token");throw new Error("unauthorized");}
  const data=await res.json().catch(()=>({}));
- if(!res.ok)throw new Error(data.error||"request_failed");
+ // نعرض تفاصيل الخطأ القادمة من السيرفر بدل رسالة عامة، لأن "server_error"
+ // وحدها لا تكفي لمعرفة سبب المشكلة (عمود ناقص، جدول غير موجود... إلخ).
+ if(!res.ok){
+  const msg=data.detail?`${data.error||"error"}: ${data.detail}`:(data.error||"request_failed");
+  const err=new Error(msg);err.code=data.error;err.detail=data.detail;err.hint=data.hint;
+  if(data.hint)err.message+=`\n\n${data.hint}`;
+  throw err;}
  return data;}
 
 /* ---------------- modal engine ---------------- */
@@ -1372,7 +1378,7 @@ document.getElementById("btn-create").onclick=async()=>{
  const err=document.getElementById("su-err");err.style.display="none";
  const code=g("su-code"),firm=g("su-firm"),admin=g("su-admin"),user=g("su-user"),pass=g("su-pass"),pass2=g("su-pass2");
  if(!code||!firm||!admin||!user||!pass){err.textContent=t("reqFields");err.style.display="block";return;}
- if(!/^[A-Za-z0-9_-]{3,20}$/.test(code)){err.textContent=t("codeFormat");err.style.display="block";return;}
+ if(!/^[A-Za-z0-9_-]{2,20}$/.test(code)){err.textContent=t("codeFormat");err.style.display="block";return;}
  if(pass!==pass2){err.textContent=t("passMismatch");err.style.display="block";return;}
  if(!SIGNUP_IDEM_KEY)newSignupAttempt();        // احتياطاً إن لم يُنشأ بعد
  btn.disabled=true;
@@ -1397,7 +1403,23 @@ document.getElementById("btn-logout").onclick=()=>{TOKEN=null;localStorage.remov
  document.getElementById("login").style.display="grid";
  DATA.length=0;CHAT.length=0;USERS.length=0;PEOPLE.length=0;ME=0;
  state={page:"home",comp:"all",sel:null,q:"",kinds:new Set(),adding:false,addingObjective:false,addingUser:false,editingUserId:null,editingFirm:false,open:new Set(),navOpen:true,wTab:"details",cComp:"all",cNode:"all",relink:null,draft:""};};
+/* فحص بنية قاعدة البيانات عند فتح الصفحة: إذا كانت ناقصة نُظهر تنبيهاً واضحاً
+   بدل أن يكتشف المستخدم المشكلة فقط عند فشل إنشاء الحساب. */
+async function checkSchema(){
+ try{
+  const d=await fetch("/api/diag").then(r=>r.json());
+  if(d&&d.schemaOk===false){
+   const box=document.getElementById("lg-err");
+   if(box){
+    box.innerHTML=`<b>${t("schemaProblem")}</b><br>`
+      +d.problems.slice(0,3).map(esc).join("<br>")
+      +(d.problems.length>3?`<br>… (+${d.problems.length-3})`:"")
+      +`<br><br>${t("schemaFix")}`;
+    box.style.display="block";}}
+ }catch(e){/* تجاهل: لا نعطّل الواجهة إذا فشل الفحص */}}
+
 paintLogin();
+checkSchema();
 if(TOKEN){enterApp().catch(()=>{TOKEN=null;localStorage.removeItem("isqm_token");});}
 </script>
 </body>

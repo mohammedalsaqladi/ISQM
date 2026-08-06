@@ -33,8 +33,79 @@ function auth(req, res, next) {
   }
 }
 
+// معالج الأخطاء: يحوّل أخطاء PostgreSQL الشائعة إلى رسائل واضحة تدل على السبب
+// بدل رسالة "server_error" العامة التي لا تفيد في التشخيص.
+const PG_HINTS = {
+  '42P01': 'جدول مفقود بقاعدة البيانات — لم يتم تشغيل schema.sql بعد، أو أنك تشغّل نسخة قديمة منه. شغّل ملف schema.sql كاملاً بمحرر قاعدة البيانات ثم أعد المحاولة.',
+  '42703': 'عمود مفقود بقاعدة البيانات — بنية الجداول لديك قديمة ولا تطابق الكود. شغّل ملف schema.sql كاملاً (يحذف الجداول القديمة ويعيد إنشاءها) ثم أعد المحاولة.',
+  '42883': 'دالة أو نوع مفقود بقاعدة البيانات — شغّل ملف schema.sql كاملاً ثم أعد المحاولة.',
+  '3D000': 'قاعدة البيانات المحددة في DATABASE_URL غير موجودة.',
+  '28P01': 'بيانات الاتصال بقاعدة البيانات غير صحيحة (اسم المستخدم أو كلمة المرور في DATABASE_URL).',
+  '23505': 'القيمة موجودة مسبقاً (تكرار في حقل فريد).',
+  '23503': 'مرجع غير صالح — السجل المرتبط غير موجود.'
+};
+
 const wrap = (fn) => (req, res) =>
-  fn(req, res).catch((e) => { console.error(e); res.status(500).json({ error: 'server_error', detail: e.message }); });
+  fn(req, res).catch((e) => {
+    console.error(`[${req.method} ${req.path}]`, e.code || '', e.message);
+    const hint = PG_HINTS[e.code];
+    res.status(500).json({
+      error: 'server_error',
+      detail: e.message,
+      pgCode: e.code || null,
+      hint: hint || null
+    });
+  });
+
+// فحص تشخيصي: يخبرك بالضبط ما إذا كانت بنية قاعدة البيانات مكتملة أم لا.
+// افتحه من المتصفح مباشرة على /api/diag
+app.get('/api/diag', wrap(async (_req, res) => {
+  const expected = {
+    roles: ['id', 'slug', 'is_admin'],
+    companies: ['id', 'code', 'name_ar', 'logo_url', 'letterhead_url', 'report_settings', 'signer_name'],
+    branches: ['id', 'company_id'],
+    users: ['id', 'company_id', 'role_id', 'first_name_ar', 'last_name_ar', 'username', 'password_hash'],
+    registration_attempts: ['idempotency_key', 'company_id', 'user_id', 'company_code'],
+    components: ['id', 'company_id', 'slug'],
+    objectives: ['id', 'company_id', 'component_id', 'code'],
+    risks: ['id', 'company_id', 'objective_id'],
+    responses: ['id', 'company_id', 'risk_id'],
+    tests: ['id', 'company_id', 'response_id'],
+    results: ['id', 'company_id', 'test_id'],
+    chat_messages: ['id', 'company_id'],
+    activity_log: ['id', 'company_id']
+  };
+  const r = await query(
+    `SELECT table_name, column_name FROM information_schema.columns WHERE table_schema='public'`);
+  const actual = {};
+  r.rows.forEach((row) => {
+    (actual[row.table_name] = actual[row.table_name] || []).push(row.column_name);
+  });
+
+  const problems = [];
+  for (const [tbl, cols] of Object.entries(expected)) {
+    if (!actual[tbl]) { problems.push(`الجدول "${tbl}" غير موجود`); continue; }
+    const missing = cols.filter((c) => !actual[tbl].includes(c));
+    if (missing.length) problems.push(`الجدول "${tbl}" ينقصه: ${missing.join(', ')}`);
+  }
+  const legacy = ['firms'].filter((t) => actual[t]);
+  if (legacy.length) problems.push(`جداول قديمة ما زالت موجودة: ${legacy.join(', ')} — شغّل schema.sql لحذفها`);
+
+  let rolesCount = null;
+  if (actual.roles) {
+    const rc = await query('SELECT COUNT(*)::int AS n FROM roles');
+    rolesCount = rc.rows[0].n;
+    if (!rolesCount) problems.push('جدول roles فارغ — شغّل schema.sql كاملاً ليضيف الأدوار الستة');
+  }
+
+  res.json({
+    schemaOk: problems.length === 0,
+    problems,
+    rolesCount,
+    tablesFound: Object.keys(actual).sort(),
+    fix: problems.length ? 'شغّل ملف schema.sql كاملاً بمحرر قاعدة البيانات ثم أعد المحاولة.' : null
+  });
+}));
 
 // يسمح فقط لمالك المكتب أو المشرف بعمليات حساسة (إدارة المستخدمين، بيانات الشركة، الاستيراد)
 function requireAdmin(req, res, next) {
@@ -96,8 +167,8 @@ app.post('/api/auth/register', wrap(async (req, res) => {
     return res.status(400).json({ error: 'missing_fields' });
 
   const code = String(firmCode).trim().toUpperCase();
-  if (!/^[A-Z0-9_-]{3,20}$/.test(code))
-    return res.status(400).json({ error: 'invalid_code' }); // 3-20 حرف/رقم إنجليزي، بدون مسافات
+  if (!/^[A-Z0-9_-]{2,20}$/.test(code))
+    return res.status(400).json({ error: 'invalid_code' }); // 2-20 حرف/رقم إنجليزي، بدون مسافات
 
   // ---- منع التكرار: نقرة مزدوجة / إعادة إرسال لنفس الطلب لا تُنشئ شركة ثانية.
   // نقفل مفتاح idemKey أولاً داخل نفس المعاملة (transaction)؛ لو كان محجوزاً
