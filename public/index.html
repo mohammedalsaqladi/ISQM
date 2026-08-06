@@ -272,15 +272,45 @@ tr:last-child td{border-bottom:0}
 .kv .k{color:var(--muted)}.kv .v{font-weight:600;text-align:end}
 .profile-grid{display:grid;grid-template-columns:250px 1fr;gap:12px}
 .big-avatar{width:60px;height:60px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:20px;font-weight:600;margin:0 auto 9px}
+.grp{margin-bottom:9px}
+.grp-h{display:flex;align-items:center;gap:8px;padding:10px 13px;cursor:pointer;user-select:none}
+.grp-h h3{margin:0;font-size:12.5px;font-weight:600;flex:1;color:var(--teal)}
+.grp-car{font-size:9px;color:var(--muted);transition:transform .15s}
+.grp-car.open{transform:rotate(90deg)}
+body[dir="rtl"] .grp-car{transform:rotate(180deg)}
+body[dir="rtl"] .grp-car.open{transform:rotate(90deg)}
 .print-head{display:none}
+/* الورق الرسمي A4: يُطبّق كخلفية للصفحة عند الطباعة، والهوامش والخط تُقرأ من
+   report_settings بقاعدة البيانات وتُحقن كمتغيرات CSS من الدالة applyPrintSettings(). */
+@page{size:A4;margin:0}
 @media print{
-  .sidebar,.topbar,.no-print,.tsearch,.add-form,.tabs{display:none!important}
-  .shell{display:block}body{background:#fff}.content{padding:0}
-  .card{box-shadow:none;border-color:#ccc;break-inside:avoid}
+  .sidebar,.topbar,.no-print,.tsearch,.add-form,.tabs,.tree-tools,.modal-bg{display:none!important}
+  .shell{display:block}
+  .content{padding:0}
+  .card{box-shadow:none;border-color:#ccc;break-inside:avoid;background:transparent}
   .print-head{display:block;margin-bottom:12px;border-bottom:2px solid var(--ink);padding-bottom:7px}
   .print-head h1{margin:0;font-size:15px}.print-head .m{font-size:10px;color:#555}
   .workspace{grid-template-columns:1fr}.tree{max-height:none}
+  body{
+    background:#fff;
+    font-family:var(--rpt-font,'Sakkal Majalla','Traditional Arabic',serif)!important;
+    font-size:var(--rpt-size,10pt)!important;
+    line-height:var(--rpt-lh,1.5)!important;
+  }
+  /* خلفية الورق الرسمي تتكرر على كل صفحة مطبوعة */
+  html{
+    background-image:var(--rpt-letterhead,none);
+    background-size:210mm 297mm;
+    background-repeat:repeat-y;
+    background-position:top center;
+  }
+  .content{
+    padding:var(--rpt-mt,30mm) var(--rpt-mr,25mm) var(--rpt-mb,30mm) var(--rpt-ml,25mm)!important;
+  }
+  .rpt-sign{display:block!important;margin-top:14mm;break-inside:avoid}
+  .rpt-sign img{display:block}
 }
+.rpt-sign{display:none}
 @media(max-width:1100px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2,.workspace,.profile-grid{grid-template-columns:1fr}.meta-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:780px){#login{grid-template-columns:1fr}.login-art{display:none}.shell{grid-template-columns:1fr}.sidebar{position:static;height:auto}.form-row{grid-template-columns:1fr}}
 </style>
@@ -370,7 +400,20 @@ objective:"هدف",risk:"خطر",response:"استجابة",test:"اختبار",r
 addTest:"إضافة اختبار",addResult:"إضافة نتيجة",addRisk:"إضافة خطر",addObjective:"إضافة هدف",testTitle:"عنوان الاختبار",testText:"وصف الاختبار",resultTitle:"عنوان النتيجة",resultText:"وصف النتيجة",riskTitle:"عنوان الخطر",riskText:"وصف الخطر",objTitle:"عنوان الهدف",objText:"وصف الهدف",itemsCount:"عدد العناصر",filterBy:"تصفية حسب",clearFilter:"إلغاء التصفية",noRisk:"لا توجد مخاطر بعد.",
 planned:"مخطط",testInprogress:"قيد التنفيذ",completed:"مكتمل",ineffective:"غير فعّالة",
 downloadTemplate:"⭳ قالب الاستيراد",addComponent:"مكوّن جديد",edit:"تعديل",
-componentName:"اسم المكوّن",componentSlug:"معرّف المكوّن (إنجليزي، بدون مسافات)",editComponent:"تعديل المكوّن",editUser:"تعديل المستخدم",
+componentName:"اسم المكوّن",
+grpIdentity:"هوية المكتب",grpBrand:"الأكليشة والشعار والختم والتوقيع",grpReport:"تنسيقات ومقدمة التقرير",
+grpContact:"بيانات الاتصال والعنوان",grpLegal:"البيانات النظامية والضريبية",grpIsqm:"نطاق ISQM 1",
+fFirmNameAr:"اسم المكتب (عربي)",fFirmNameEn:"اسم المكتب (إنجليزي)",fLicense:"رخصة مزاولة المهنة",
+fCity:"المدينة (تظهر في سطر التوقيع)",fSignerName:"اسم معتمد التقرير (الشريك الموقّع)",fSignerTitle:"صفة الموقّع",
+fLetterhead:"الورق الرسمي (الأكليشة)",fLogo:"الشعار",fStamp:"الختم",fSignature:"التوقيع",
+assetHint:"رابط أو data:image",fFooter:"تذييل التقرير",fPublicUrl:"الرابط العام",
+fPhone:"الهاتف",fFax:"الفاكس",fEmail:"البريد الإلكتروني",fWebsite:"الموقع الإلكتروني",fStreet:"العنوان",fPostal:"الرمز البريدي",
+fCr:"السجل التجاري",fTax:"الرقم الضريبي",fSubStart:"بداية الاشتراك",fSubEnd:"نهاية الاشتراك",
+fScopeAr:"النطاق (عربي)",fScopeEn:"النطاق (إنجليزي)",fPeriodStart:"بداية الفترة",fPeriodEnd:"نهاية الفترة",
+fPartners:"عدد الشركاء",fStaff:"عدد الموظفين",fEngagements:"عدد الارتباطات",
+fFirstAr:"الاسم الأول (عربي)",fLastAr:"اسم العائلة (عربي)",fFirstEn:"الاسم الأول (إنجليزي)",fLastEn:"اسم العائلة (إنجليزي)",
+fJobAr:"المسمى الوظيفي (عربي)",fJobEn:"المسمى الوظيفي (إنجليزي)",
+fNameAr:"الاسم (عربي)",fNameEn:"الاسم (إنجليزي)",firmCode:"كود الشركة",componentSlug:"معرّف المكوّن (إنجليزي، بدون مسافات)",editComponent:"تعديل المكوّن",editUser:"تعديل المستخدم",
 editObjective:"تعديل الهدف",editRisk:"تعديل الخطر",editResponse:"تعديل الإجراء",editTest:"تعديل الاختبار",editResult:"تعديل النتيجة",
 compStats:"إحصائيات المكوّن",description:"الوصف",
 companyTitle:"بيانات الشركة",companySub:"المعلومات النظامية والمهنية للمكتب.",usersTitle:"المستخدمون",usersSub:"مستخدمو النظام وصلاحياتهم.",profileTitle:"ملفي الشخصي",profileSub:"بياناتك في النظام.",
@@ -407,7 +450,20 @@ objective:"Objective",risk:"Risk",response:"Response",test:"Test",result:"Result
 addTest:"Add test",addResult:"Add result",addRisk:"Add risk",addObjective:"Add objective",testTitle:"Test title",testText:"Test description",resultTitle:"Result title",resultText:"Result description",riskTitle:"Risk title",riskText:"Risk description",objTitle:"Objective title",objText:"Objective description",itemsCount:"Item counts",filterBy:"Filter by",clearFilter:"Clear filter",noRisk:"No risks yet.",
 planned:"Planned",testInprogress:"In progress",completed:"Completed",ineffective:"Ineffective",
 downloadTemplate:"⭳ Import template",addComponent:"New component",edit:"Edit",
-componentName:"Component name",componentSlug:"Component slug (English, no spaces)",editComponent:"Edit component",editUser:"Edit user",
+componentName:"Component name",
+grpIdentity:"Firm identity",grpBrand:"Letterhead, logo, stamp & signature",grpReport:"Report formatting & preamble",
+grpContact:"Contact details & address",grpLegal:"Statutory & tax details",grpIsqm:"ISQM 1 scope",
+fFirmNameAr:"Firm name (Arabic)",fFirmNameEn:"Firm name (English)",fLicense:"Practice licence no.",
+fCity:"City (shown on signature line)",fSignerName:"Report signer (signing partner)",fSignerTitle:"Signer title",
+fLetterhead:"Letterhead",fLogo:"Logo",fStamp:"Stamp",fSignature:"Signature",
+assetHint:"URL or data:image",fFooter:"Report footer",fPublicUrl:"Public base URL",
+fPhone:"Phone",fFax:"Fax",fEmail:"Email",fWebsite:"Website",fStreet:"Address",fPostal:"Postal code",
+fCr:"CR number",fTax:"Tax number",fSubStart:"Subscription start",fSubEnd:"Subscription end",
+fScopeAr:"Scope (Arabic)",fScopeEn:"Scope (English)",fPeriodStart:"Period start",fPeriodEnd:"Period end",
+fPartners:"Partners",fStaff:"Staff",fEngagements:"Engagements",
+fFirstAr:"First name (Arabic)",fLastAr:"Last name (Arabic)",fFirstEn:"First name (English)",fLastEn:"Last name (English)",
+fJobAr:"Job title (Arabic)",fJobEn:"Job title (English)",
+fNameAr:"Name (Arabic)",fNameEn:"Name (English)",firmCode:"Firm code",componentSlug:"Component slug (English, no spaces)",editComponent:"Edit component",editUser:"Edit user",
 editObjective:"Edit objective",editRisk:"Edit risk",editResponse:"Edit response",editTest:"Edit test",editResult:"Edit result",
 compStats:"Component statistics",description:"Description",
 companyTitle:"Firm profile",companySub:"Statutory and professional details.",usersTitle:"Users",usersSub:"System users and permissions.",profileTitle:"My profile",profileSub:"Your details in the system.",
@@ -636,14 +692,16 @@ let NODE_BY_CODE={};
 
 let MY_ROLE=null;
 async function loadAll(){
- const [tree,users,firm,chat]=await Promise.all([
-  api("/tree"),api("/users"),api("/firm"),api("/chat")]);
+ const [tree,users,firm,chat,roles]=await Promise.all([
+  api("/tree"),api("/users"),api("/firm"),api("/chat"),api("/roles")]);
+ ROLES=roles;
  DATA.length=0;tree.forEach(c=>DATA.push(c));
  USERS.length=0;users.forEach(u=>USERS.push(u));
  const me=users.find(u=>u.me);MY_ROLE=me?me.roleSlug:null;
  PEOPLE.length=0;users.forEach(u=>PEOPLE.push(u.name));
  ME=Math.max(0,users.findIndex(u=>u.me));
  Object.assign(FIRM,firm);
+ applyPrintSettings();
  CHAT.length=0;chat.forEach(m=>CHAT.push({...m,by:Math.max(0,users.findIndex(u=>u.id===m.byId))}));
  MID=CHAT.reduce((a,m)=>Math.max(a,m.id),0);
  indexTree();}
@@ -710,7 +768,7 @@ function fmtScope(compId,code){
  return code?nodeTitle(compId,code):L(compById(compId))+" — "+t("generalChat");}
 
 /* ---------------- state ---------------- */
-let state={page:"home",comp:"all",sel:null,q:"",kinds:new Set(),adding:false,addingObjective:false,addingUser:false,editingUserId:null,editingFirm:false,open:new Set(),navOpen:true,wTab:"details",cComp:"all",cNode:"all",relink:null,draft:""};
+let state={page:"home",comp:"all",sel:null,q:"",kinds:new Set(),openGroups:new Set(["identity"]),openGroups:new Set(["identity"]),adding:false,addingObjective:false,addingUser:false,editingUserId:null,editingFirm:false,open:new Set(),navOpen:true,wTab:"details",cComp:"all",cNode:"all",relink:null,draft:""};
 
 function setLang(l){lang=l;document.body.dir=T[l].dir;document.documentElement.lang=l;document.documentElement.dir=T[l].dir;
  paintLogin();if(document.getElementById("app").style.display==="block"){paintChrome();render();}}
@@ -764,24 +822,65 @@ function buildNav(){
  const addC=document.getElementById("btn-add-comp");
  if(addC)addC.onclick=(e)=>{e.stopPropagation();addComponentPrompt();};}
 
+/* الاسم بلغة الواجهة الحالية إلزامي، والآخر اختياري. */
+const reqAr=()=>lang==="ar", nameArReq=()=>reqAr(), nameEnReq=()=>!reqAr();
+
 function addComponentPrompt(){
  openModal({title:t("addComponent"),submitLabel:t("save"),fields:[
-  {id:"nameAr",label:t("componentName"),required:true},
+  {id:"nameAr",label:t("fNameAr"),required:nameArReq()},
+  {id:"nameEn",label:t("fNameEn"),required:nameEnReq()},
   {id:"slug",label:t("componentSlug"),required:true,placeholder:"gov, ethics, ..."}
  ],onSubmit:async(v)=>{
-  await api("/components",{method:"POST",body:JSON.stringify({slug:v.slug.toLowerCase(),nameAr:v.nameAr})});
+  await api("/components",{method:"POST",body:JSON.stringify({slug:v.slug.toLowerCase(),
+    nameAr:v.nameAr||v.nameEn,nameEn:v.nameEn||v.nameAr})});
   await loadAll();buildNav();render();}});}
 
 function editComponentPrompt(dbId,curName){
+ const c=DATA.find(x=>x.dbId===dbId)||{};
  openModal({title:t("editComponent"),submitLabel:t("save"),fields:[
-  {id:"nameAr",label:t("componentName"),value:curName,required:true}
+  {id:"nameAr",label:t("fNameAr"),value:c.ar||curName,required:nameArReq()},
+  {id:"nameEn",label:t("fNameEn"),value:c.en||"",required:nameEnReq()}
  ],onSubmit:async(v)=>{
-  await api("/components/"+dbId,{method:"PATCH",body:JSON.stringify({nameAr:v.nameAr})});
+  await api("/components/"+dbId,{method:"PATCH",body:JSON.stringify({nameAr:v.nameAr,nameEn:v.nameEn})});
   await loadAll();buildNav();render();}});}
 
 /* ---------------- views ---------------- */
+/* يقرأ إعدادات الطباعة من قاعدة البيانات (report_settings) ويحقنها كمتغيرات CSS،
+   فيصبح الورق الرسمي خلفية الصفحة والخط والهوامش مطابقة لما حدّدته بالنظام. */
+function applyPrintSettings(){
+ const p=(FIRM&&FIRM.print)||{};
+ const s=p.settings||{};
+ const root=document.documentElement.style;
+ const mm=(v,d)=>`${(v==null?d:v)}mm`;
+ root.setProperty("--rpt-mt",mm(s.mt,30));
+ root.setProperty("--rpt-mr",mm(s.mr,25));
+ root.setProperty("--rpt-mb",mm(s.mb,30));
+ root.setProperty("--rpt-ml",mm(s.ml,25));
+ root.setProperty("--rpt-size",`${s.size||10}pt`);
+ root.setProperty("--rpt-lh",String(s.line_height||1.5));
+ if(s.font)root.setProperty("--rpt-font",`'${s.font}','Traditional Arabic',serif`);
+ // الورق الرسمي يُستخدم فقط إذا كان مفعّلاً بالإعدادات وموجوداً بقاعدة البيانات
+ const useLh=s.letterhead!==false&&p.letterhead;
+ root.setProperty("--rpt-letterhead",useLh?`url("${p.letterhead}")`:"none");}
+
+/* ترويسة الطباعة: تعتمد الشعار المخزّن بقاعدة البيانات إن وُجد.
+   عند تفعيل الورق الرسمي نُخفي الترويسة لأن الشعار مطبوع أصلاً على الورق. */
 function printHead(title){const n=new Date();
- return `<div class="print-head"><h1>${esc(L(FIRM.name))} — ${esc(title)}</h1><div class="m">ISQM 1 · ${t("printedAt")}: ${n.toISOString().slice(0,10)} ${n.toTimeString().slice(0,5)}</div></div>`;}
+ const p=(FIRM&&FIRM.print)||{},s=p.settings||{};
+ const onLetterhead=s.letterhead!==false&&p.letterhead;
+ const logoH=s.logo_h||18;
+ const logo=(!onLetterhead&&p.logo)?`<img src="${p.logo}" alt="" style="height:${logoH}mm;margin-bottom:5px">`:"";
+ const head=onLetterhead?"":`<div class="print-head">${logo}<h1>${esc(L(FIRM.name))} — ${esc(title)}</h1><div class="m">ISQM 1 · ${t("printedAt")}: ${n.toISOString().slice(0,10)} ${n.toTimeString().slice(0,5)}</div></div>`;
+ return head+printSign();}
+
+/* كتلة الختم والتوقيع تظهر عند الطباعة فقط */
+function printSign(){
+ const p=(FIRM&&FIRM.print)||{},s=p.settings||{};
+ if(!p.signature&&!p.stamp&&!p.footer)return "";
+ const sig=p.signature?`<img src="${p.signature}" alt="" style="height:${s.sign_h||24}mm">`:"";
+ const stamp=p.stamp?`<img src="${p.stamp}" alt="" style="height:${s.stamp_h||32}mm">`:"";
+ const footer=p.footer?`<div style="margin-top:6mm;font-size:.85em">${esc(p.footer)}</div>`:"";
+ return `<div class="rpt-sign"><div style="display:flex;gap:14mm;align-items:flex-end">${sig}${stamp}</div>${footer}</div>`;}
 
 function viewHome(){
  const s=totals(),tot=s.h+s.m+s.l||1,maxR=Math.max(...DATA.map(c=>statsOf(c).rk));
@@ -991,61 +1090,126 @@ function viewChat(){
   ${cid==="all"?"":`<div class="composer no-print"><input id="c-in" placeholder="${t("sendPh")}" value="${esc(state.draft)}"><button class="btn" id="c-send">${t("send")}</button></div>`}
  </div></div>`;}
 
-function viewCompany(){const kv=(k,v)=>`<div class="kv"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`;
+/* بيانات الشركة معروضة كمجموعات قابلة للطي، كل مجموعة تُعدَّل بنافذة منبثقة
+   مستقلة، وأسماء الحقول مطابقة لأعمدة جدول companies بقاعدة البيانات. */
+const COMPANY_GROUPS=[
+ {key:"identity",titleKey:"grpIdentity",fields:[
+   {col:"name_ar",labelKey:"fFirmNameAr",required:true},
+   {col:"name_en",labelKey:"fFirmNameEn"},
+   {col:"license_no",labelKey:"fLicense"},
+   {col:"city",labelKey:"fCity"},
+   {col:"signer_name",labelKey:"fSignerName"},
+   {col:"signer_title",labelKey:"fSignerTitle"}]},
+ {key:"brand",titleKey:"grpBrand",fields:[
+   {col:"letterhead_url",labelKey:"fLetterhead",type:"textarea",rows:2,hint:true},
+   {col:"logo_url",labelKey:"fLogo",type:"textarea",rows:2,hint:true},
+   {col:"stamp_url",labelKey:"fStamp",type:"textarea",rows:2,hint:true},
+   {col:"signature_url",labelKey:"fSignature",type:"textarea",rows:2,hint:true}]},
+ {key:"report",titleKey:"grpReport",fields:[
+   {col:"report_footer_ar",labelKey:"fFooter",type:"textarea",rows:2},
+   {col:"public_base_url",labelKey:"fPublicUrl"}]},
+ {key:"contact",titleKey:"grpContact",fields:[
+   {col:"phone",labelKey:"fPhone"},
+   {col:"fax",labelKey:"fFax"},
+   {col:"email",labelKey:"fEmail"},
+   {col:"website",labelKey:"fWebsite"},
+   {col:"street",labelKey:"fStreet"},
+   {col:"postal_code",labelKey:"fPostal"}]},
+ {key:"legal",titleKey:"grpLegal",fields:[
+   {col:"cr_number",labelKey:"fCr"},
+   {col:"tax_number",labelKey:"fTax"},
+   {col:"subscription_start",labelKey:"fSubStart",type:"date"},
+   {col:"subscription_end",labelKey:"fSubEnd",type:"date"}]},
+ {key:"isqm",titleKey:"grpIsqm",fields:[
+   {col:"scope_ar",labelKey:"fScopeAr",type:"textarea",rows:2},
+   {col:"scope_en",labelKey:"fScopeEn",type:"textarea",rows:2},
+   {col:"period_start",labelKey:"fPeriodStart",type:"date"},
+   {col:"period_end",labelKey:"fPeriodEnd",type:"date"},
+   {col:"partners_count",labelKey:"fPartners",type:"number"},
+   {col:"staff_count",labelKey:"fStaff",type:"number"},
+   {col:"engagements_count",labelKey:"fEngagements",type:"number"}]}
+];
+
+const isAssetUrl=v=>typeof v==="string"&&(v.startsWith("data:")||/^https?:/.test(v));
+function assetPreview(col,v){
+ if(!isAssetUrl(v))return "";
+ return `<img src="${v}" alt="" style="max-height:46px;max-width:150px;border:1px solid var(--line);border-radius:5px;padding:3px;background:#fff">`;}
+
+function viewCompany(){
  const canManage=MY_ROLE==="owner"||MY_ROLE==="admin";
- const editBtn=canManage?`<button class="btn xs" id="btn-edit-firm">✎ ${t("editFirm")}</button>`:"";
+ const raw=FIRM.raw||{};
+ const groups=COMPANY_GROUPS.map(g=>{
+  const open=state.openGroups.has(g.key);
+  const rows=g.fields.map(f=>{
+   const v=raw[f.col];
+   const shown=(v==null||v==="")?"—":(isAssetUrl(v)?assetPreview(f.col,v):v);
+   return `<div class="kv"><span class="k">${t(f.labelKey)}</span><span class="v">${isAssetUrl(v)?shown:esc(shown)}</span></div>`;
+  }).join("");
+  return `<div class="card grp">
+   <div class="grp-h" data-grp="${g.key}">
+    <span class="grp-car ${open?"open":""}">▶</span>
+    <h3>${t(g.titleKey)}</h3>
+    ${canManage?`<button class="btn ghost xs no-print" data-edit-grp="${g.key}">✎ ${t("edit")}</button>`:""}
+   </div>
+   ${open?`<div class="card-b">${rows}</div>`:""}
+  </div>`;
+ }).join("");
  return printHead(t("companyTitle"))+`
  <div class="page-head"><div><h2>${t("companyTitle")}</h2><p>${t("companySub")}</p></div>
- <div class="side no-print">${editBtn}<button class="btn ghost xs icobtn" onclick="window.print()" title="${t("print")}">⎙</button></div></div>
- <div class="grid2b"><div class="card"><div class="card-h"><h3>${t("companyTitle")}</h3></div><div class="card-b">
-  ${kv(t("firmName"),L(FIRM.name))}${kv(t("license"),FIRM.license)}${kv(t("cr"),FIRM.cr)}${kv(t("city"),L(FIRM.city))}${kv(t("country"),L(FIRM.country))}${kv(t("phone"),FIRM.phone)}</div></div>
- <div class="card"><div class="card-h"><h3>ISQM 1</h3></div><div class="card-b">
-  ${kv(t("scope"),L(FIRM.scope))}${kv(t("period"),L(FIRM.period))}${kv(t("respScope"),L(FIRM.respName||{}))}${kv(t("opRespScope"),L(FIRM.opRespName||{}))}${kv(t("partners"),FIRM.partners)}${kv(t("staff"),FIRM.staff)}${kv(t("engagements"),FIRM.engagements)}</div></div></div>`;}
+ <div class="side no-print"><button class="btn ghost xs icobtn" onclick="window.print()" title="${t("print")}">⎙</button></div></div>
+ <div class="kv" style="margin-bottom:10px"><span class="k">${t("firmCode")}</span><span class="v mono">${esc(FIRM.code||"")}</span></div>
+ ${groups}`;}
 
-function openEditFirmModal(){
- const clean=v=>(v==null||v==="—")?"":v;
- openModal({title:t("editFirm"),submitLabel:t("save"),fields:[
-  {id:"name",label:t("firmName"),value:L(FIRM.name),required:true},
-  {id:"license",label:t("license"),value:clean(FIRM.license)},
-  {id:"cr",label:t("cr"),value:clean(FIRM.cr)},
-  {id:"phone",label:t("phone"),value:clean(FIRM.phone)},
-  {id:"city",label:t("city"),value:L(FIRM.city)},
-  {id:"country",label:t("country"),value:L(FIRM.country)},
-  {id:"partners",label:t("partners"),type:"number",value:clean(FIRM.partners)||0},
-  {id:"staff",label:t("staff"),type:"number",value:clean(FIRM.staff)||0},
-  {id:"engagements",label:t("engagements"),type:"number",value:clean(FIRM.engagements)||0},
-  {id:"scope",label:t("scope"),type:"textarea",rows:3,value:L(FIRM.scope)}
- ],onSubmit:async(v)=>{
-  await api("/firm",{method:"PATCH",body:JSON.stringify({...v,
-    partners:+v.partners||0,staff:+v.staff||0,engagements:+v.engagements||0})});
+function openEditGroupModal(key){
+ const g=COMPANY_GROUPS.find(x=>x.key===key);if(!g)return;
+ const raw=FIRM.raw||{};
+ const fields=g.fields.map(f=>({
+   id:f.col,label:t(f.labelKey)+(f.hint?" — "+t("assetHint"):""),
+   type:f.type||"text",rows:f.rows,required:f.required,
+   value:raw[f.col]==null?"":raw[f.col]}));
+ openModal({title:t(g.titleKey),submitLabel:t("save"),fields,onSubmit:async(v)=>{
+  await api("/firm",{method:"PATCH",body:JSON.stringify(v)});
   await loadAll();render();}});}
 
-const ROLE_KEYS=["owner","admin","quality_lead","manager","staff","viewer"];
-const roleOptions=()=>ROLE_KEYS.map(r=>({value:r,label:t("role_"+r)}));
+let ROLES=[];
+const roleOptions=()=>ROLES.map(r=>({value:String(r.id),label:L(r.name)}));
 
 function openAddUserModal(){
  openModal({title:t("addUser"),submitLabel:t("save"),fields:[
-  {id:"fullName",label:t("name"),required:true},
+  {id:"firstNameAr",label:t("fFirstAr"),required:true},
+  {id:"lastNameAr",label:t("fLastAr")},
+  {id:"firstNameEn",label:t("fFirstEn")},
+  {id:"lastNameEn",label:t("fLastEn")},
   {id:"username",label:t("user"),required:true},
-  {id:"email",label:t("email"),type:"email"},
   {id:"password",label:t("pass"),type:"password",required:true},
-  {id:"role",label:t("role"),type:"select",options:roleOptions(),value:"staff"}
+  {id:"email",label:t("email"),type:"email"},
+  {id:"phone",label:t("fPhone")},
+  {id:"jobTitleAr",label:t("fJobAr")},
+  {id:"jobTitleEn",label:t("fJobEn")},
+  {id:"roleId",label:t("role"),type:"select",options:roleOptions(),value:"5"}
  ],onSubmit:async(v)=>{
-  await api("/users",{method:"POST",body:JSON.stringify(v)});
+  await api("/users",{method:"POST",body:JSON.stringify({...v,roleId:+v.roleId})});
   await loadAll();render();}});}
 
 function openEditUserModal(uid){
  const u=USERS.find(x=>x.id===uid);if(!u)return;
+ const blank=v=>(v==null||v==="—")?"":v;
  openModal({title:t("editUser"),submitLabel:t("save"),fields:[
-  {id:"fullName",label:t("name"),value:L(u.name),required:true},
-  {id:"email",label:t("email"),value:u.email==="—"?"":u.email},
-  {id:"role",label:t("role"),type:"select",options:roleOptions(),value:u.roleSlug},
+  {id:"firstNameAr",label:t("fFirstAr"),value:blank(u.firstNameAr),required:true},
+  {id:"lastNameAr",label:t("fLastAr"),value:blank(u.lastNameAr)},
+  {id:"firstNameEn",label:t("fFirstEn"),value:blank(u.firstNameEn)},
+  {id:"lastNameEn",label:t("fLastEn"),value:blank(u.lastNameEn)},
+  {id:"email",label:t("email"),value:blank(u.email)},
+  {id:"phone",label:t("fPhone"),value:blank(u.phone)},
+  {id:"jobTitleAr",label:t("fJobAr"),value:blank(u.jobTitle&&u.jobTitle.ar)},
+  {id:"jobTitleEn",label:t("fJobEn"),value:blank(u.jobTitle&&u.jobTitle.en)},
+  {id:"roleId",label:t("role"),type:"select",options:roleOptions(),value:String(u.roleId)},
   {id:"isActive",label:t("status"),type:"select",value:u.active?"1":"0",
    options:[{value:"1",label:t("active")},{value:"0",label:t("inactive")}]},
   {id:"password",label:t("newPasswordOptional"),type:"password",placeholder:t("leaveBlankKeep")}
  ],onSubmit:async(v)=>{
-  await api("/users/"+uid,{method:"PATCH",body:JSON.stringify({fullName:v.fullName,email:v.email,
-    role:v.role,isActive:v.isActive==="1",password:v.password||undefined})});
+  await api("/users/"+uid,{method:"PATCH",body:JSON.stringify({...v,
+    roleId:+v.roleId,isActive:v.isActive==="1",password:v.password||undefined})});
   await loadAll();render();}});}
 
 function viewUsers(){
@@ -1145,8 +1309,12 @@ function bind(){
  const addUser=document.getElementById("btn-add-user");
  if(addUser)addUser.onclick=()=>openAddUserModal();
  v.querySelectorAll("[data-edit-user-btn]").forEach(el=>el.onclick=()=>openEditUserModal(el.dataset.editUserBtn));
- const editFirm=document.getElementById("btn-edit-firm");
- if(editFirm)editFirm.onclick=()=>openEditFirmModal();}
+ v.querySelectorAll("[data-grp]").forEach(el=>el.onclick=()=>{
+   const k=el.dataset.grp;
+   state.openGroups.has(k)?state.openGroups.delete(k):state.openGroups.add(k);
+   render();});
+ v.querySelectorAll("[data-edit-grp]").forEach(el=>el.onclick=e=>{
+   e.stopPropagation();openEditGroupModal(el.dataset.editGrp);});}
 
 async function sendMsg(){
  const inp=document.getElementById("c-in");if(!inp)return;

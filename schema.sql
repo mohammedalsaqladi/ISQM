@@ -1,14 +1,14 @@
 -- =====================================================================
 --  ISQM 1 Quality Management System — Database Schema (PostgreSQL 14+)
 --  نظام إدارة الجودة وفق المعيار الدولي ISQM 1 — مخطط قاعدة البيانات
---  Encoding: UTF-8   |   All text columns support Arabic + English
+--  جداول companies و users مطابقة لبنية الأعمدة المعتمدة لديك.
 -- =====================================================================
 
--- تنظيف أي بقايا جداول/أنواع (types) من تشغيل سابق — يجعل هذا الملف آمناً
--- للتشغيل من الصفر في أي وقت دون الحاجة لملف حذف منفصل قبله.
+-- تنظيف أي بقايا من تشغيل سابق — يجعل الملف آمناً للتشغيل في أي وقت.
 DROP VIEW  IF EXISTS v_unread_by_item, v_unread_by_component, v_component_stats CASCADE;
 DROP TABLE IF EXISTS activity_log, chat_reads, chat_messages, attachments,
-                     results, tests, responses, risks, objectives, components, users, firms,
+                     results, tests, responses, risks, objectives, components,
+                     users, branches, companies, roles, firms,
                      registration_attempts CASCADE;
 DROP TYPE  IF EXISTS severity_level, risk_status, response_status, response_type,
                      result_status, test_status, user_role, item_kind CASCADE;
@@ -27,123 +27,185 @@ CREATE TYPE response_status  AS ENUM ('inprog','done','late');
 CREATE TYPE response_type    AS ENUM ('prev','det','mon');      -- وقائية / كاشفة / رقابية
 CREATE TYPE result_status    AS ENUM ('effective','partial','ineffective');
 CREATE TYPE test_status      AS ENUM ('planned','inprogress','completed');
-CREATE TYPE user_role        AS ENUM ('owner','admin','quality_lead','manager','staff','viewer');
 CREATE TYPE item_kind        AS ENUM ('component','objective','risk','response','test','result');
 
 -- ---------------------------------------------------------------------
--- 1. FIRMS  (الشركات / المكاتب)  — multi-tenant root
+-- 1. ROLES  (الأدوار — جدول مرجعي يرتبط به users.role_id)
 -- ---------------------------------------------------------------------
-CREATE TABLE firms (
-    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    firm_code           VARCHAR(20)  NOT NULL UNIQUE,          -- كود الشركة عند تسجيل الدخول
-    name_ar             VARCHAR(255) NOT NULL,
-    name_en             VARCHAR(255),
-    license_no          VARCHAR(50),
-    cr_no               VARCHAR(50),
-    city_ar             VARCHAR(100),
-    city_en             VARCHAR(100),
-    country_ar          VARCHAR(100),
-    country_en          VARCHAR(100),
-    phone               VARCHAR(30),
-    email               VARCHAR(255),
-    partners_count      INTEGER DEFAULT 0,
-    staff_count         INTEGER DEFAULT 0,
-    engagements_count   INTEGER DEFAULT 0,
-    scope_ar            TEXT,
-    scope_en            TEXT,
-    period_start        DATE,
-    period_end          DATE,
-    ultimate_resp_user  UUID,      -- FK added after users (المسؤول النهائي)
-    operational_resp_user UUID,    -- FK added after users (المسؤول التشغيلي)
-    is_active           BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+CREATE TABLE roles (
+    id        INTEGER PRIMARY KEY,
+    slug      VARCHAR(30) NOT NULL UNIQUE,
+    name_ar   VARCHAR(60) NOT NULL,
+    name_en   VARCHAR(60) NOT NULL,
+    is_admin  BOOLEAN NOT NULL DEFAULT FALSE   -- صلاحية إدارة المستخدمين وبيانات الشركة
 );
+INSERT INTO roles (id, slug, name_ar, name_en, is_admin) VALUES
+ (1,'owner',        'مالك',           'Owner',        TRUE),
+ (2,'admin',        'مشرف',           'Admin',        TRUE),
+ (3,'quality_lead', 'مسؤول الجودة',   'Quality lead', FALSE),
+ (4,'manager',      'مدير',           'Manager',      FALSE),
+ (5,'staff',        'موظف',           'Staff',        FALSE),
+ (6,'viewer',       'مُطّلع فقط',      'Viewer',       FALSE);
 
 -- ---------------------------------------------------------------------
--- 2. USERS  (المستخدمون)
+-- 2. COMPANIES  (الشركات / المكاتب)
+-- ---------------------------------------------------------------------
+CREATE TABLE companies (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code               VARCHAR(20)  NOT NULL UNIQUE,   -- كود الشركة عند تسجيل الدخول
+    name_ar            VARCHAR(200) NOT NULL,
+    name_en            VARCHAR(200),
+    logo_url           TEXT,            -- شعار المكتب (رابط أو data:image base64)
+    letterhead_url     TEXT,            -- الورق الرسمي A4 المستخدم كخلفية عند الطباعة
+    license_no         VARCHAR(60),     -- رخصة مزاولة المهنة
+    cr_number          VARCHAR(60),     -- السجل التجاري
+    tax_number         VARCHAR(60),     -- الرقم الضريبي
+    email              VARCHAR(160),
+    website            VARCHAR(200),
+    phone              VARCHAR(60),
+    fax                VARCHAR(60),
+    street             VARCHAR(200),
+    city               VARCHAR(120),
+    postal_code        VARCHAR(20),
+    subscription_start DATE,
+    subscription_end   DATE,
+    is_active          BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    stamp_url          TEXT,            -- ختم المكتب
+    signature_url      TEXT,            -- توقيع معتمد التقرير
+    report_footer_ar   TEXT,
+    public_base_url    VARCHAR(200),
+    report_settings    JSONB NOT NULL DEFAULT '{}'::jsonb,  -- الخط/الهوامش/المقاسات عند الطباعة
+    signer_name        VARCHAR(160),    -- اسم معتمد التقرير (الشريك الموقّع)
+    signer_title       VARCHAR(200),    -- صفة الموقّع
+    -- حقول خاصة بنطاق ISQM 1
+    scope_ar           TEXT,
+    scope_en           TEXT,
+    period_start       DATE,
+    period_end         DATE,
+    partners_count     INTEGER DEFAULT 0,
+    staff_count        INTEGER DEFAULT 0,
+    engagements_count  INTEGER DEFAULT 0
+);
+CREATE INDEX idx_companies_code ON companies(code);
+
+-- ---------------------------------------------------------------------
+-- 3. BRANCHES  (الفروع — اختياري، يرتبط به users.branch_id)
+-- ---------------------------------------------------------------------
+CREATE TABLE branches (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    name_ar    VARCHAR(160) NOT NULL,
+    name_en    VARCHAR(160),
+    city       VARCHAR(120),
+    is_active  BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_branches_company ON branches(company_id);
+
+-- ---------------------------------------------------------------------
+-- 4. USERS  (المستخدمون)
 -- ---------------------------------------------------------------------
 CREATE TABLE users (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    firm_id         UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+    company_id      UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    branch_id       UUID REFERENCES branches(id) ON DELETE SET NULL,
+    role_id         INTEGER NOT NULL DEFAULT 5 REFERENCES roles(id),
+    first_name_ar   VARCHAR(100) NOT NULL,
+    last_name_ar    VARCHAR(100),
+    first_name_en   VARCHAR(100),
+    last_name_en    VARCHAR(100),
+    gender          VARCHAR(10),
+    phone           VARCHAR(60),
+    job_title_ar    VARCHAR(160),
+    job_title_en    VARCHAR(160),
+    employment_type VARCHAR(60),
+    is_sales_agent  BOOLEAN NOT NULL DEFAULT FALSE,
     username        VARCHAR(60)  NOT NULL,
-    password_hash   VARCHAR(255) NOT NULL,          -- bcrypt / argon2 — never plain text
-    full_name_ar    VARCHAR(150) NOT NULL,
-    full_name_en    VARCHAR(150),
-    email           VARCHAR(255),
-    phone           VARCHAR(30),
-    role            user_role NOT NULL DEFAULT 'staff',
-    job_title_ar    VARCHAR(150),
-    job_title_en    VARCHAR(150),
-    avatar_url      TEXT,
-    lang            CHAR(2) NOT NULL DEFAULT 'ar',  -- ar | en
+    email           VARCHAR(160),
+    password_hash   TEXT NOT NULL,
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
     last_login_at   TIMESTAMPTZ,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (firm_id, username)
+    qualifications  TEXT,
+    UNIQUE (company_id, username)
 );
-CREATE INDEX idx_users_firm ON users(firm_id);
+CREATE INDEX idx_users_company ON users(company_id);
 
-ALTER TABLE firms
-    ADD CONSTRAINT fk_firms_ultimate FOREIGN KEY (ultimate_resp_user) REFERENCES users(id) ON DELETE SET NULL,
-    ADD CONSTRAINT fk_firms_operational FOREIGN KEY (operational_resp_user) REFERENCES users(id) ON DELETE SET NULL;
+-- المسؤول الأعلى والمسؤول التشغيلي عن نظام الجودة (يُضافان بعد users لتفادي دورة مراجع)
+ALTER TABLE companies
+  ADD COLUMN ultimate_resp_user    UUID REFERENCES users(id) ON DELETE SET NULL,
+  ADD COLUMN operational_resp_user UUID REFERENCES users(id) ON DELETE SET NULL;
 
 -- ---------------------------------------------------------------------
--- 3. COMPONENTS  (المكوّنات الثمانية)
+-- 5. REGISTRATION ATTEMPTS  (منع تكرار إنشاء الحساب عند تعدد النقر)
+-- ---------------------------------------------------------------------
+CREATE TABLE registration_attempts (
+    idempotency_key VARCHAR(80) PRIMARY KEY,
+    company_id      UUID REFERENCES companies(id) ON DELETE CASCADE,
+    user_id         UUID REFERENCES users(id) ON DELETE CASCADE,
+    company_code    VARCHAR(20),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ---------------------------------------------------------------------
+-- 6. COMPONENTS  (مكوّنات نظام إدارة الجودة الثمانية)
 -- ---------------------------------------------------------------------
 CREATE TABLE components (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    firm_id     UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
-    slug        VARCHAR(30) NOT NULL,          -- gov, ethics, accept, perf, res, info, mon, ra
-    seq         SMALLINT    NOT NULL,          -- 1..8
-    name_ar     VARCHAR(255) NOT NULL,
-    name_en     VARCHAR(255) NOT NULL,
-    desc_ar     TEXT,
-    desc_en     TEXT,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (firm_id, slug)
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    slug       VARCHAR(40) NOT NULL,
+    seq        INTEGER NOT NULL,
+    name_ar    VARCHAR(200) NOT NULL,
+    name_en    VARCHAR(200),
+    desc_ar    TEXT,
+    desc_en    TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (company_id, slug)
 );
-CREATE INDEX idx_components_firm ON components(firm_id);
+CREATE INDEX idx_components_company ON components(company_id);
 
 -- ---------------------------------------------------------------------
--- 4. OBJECTIVES  (أهداف الجودة)
+-- 7. OBJECTIVES  (أهداف الجودة)
 -- ---------------------------------------------------------------------
 CREATE TABLE objectives (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    firm_id       UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+    company_id    UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     component_id  UUID NOT NULL REFERENCES components(id) ON DELETE CASCADE,
     code          VARCHAR(20) NOT NULL,          -- O-01
-    standard_ref  VARCHAR(30),                   -- [1.28]
-    title_ar      VARCHAR(300) NOT NULL,         -- العنوان المختصر (يظهر في الشجرة)
+    standard_ref  VARCHAR(40),                   -- [1.28]
+    title_ar      VARCHAR(300) NOT NULL,
     title_en      VARCHAR(300),
-    desc_ar       TEXT NOT NULL,                 -- النص الكامل (يظهر في التفاصيل)
+    desc_ar       TEXT NOT NULL,
     desc_en       TEXT,
-    is_additional BOOLEAN NOT NULL DEFAULT FALSE,-- هدف إضافي خاص بالمكتب
-    owner_id      UUID REFERENCES users(id) ON DELETE SET NULL,   -- موجّه إلى
-    created_by    UUID REFERENCES users(id) ON DELETE SET NULL,   -- منشئ العملية
+    is_additional BOOLEAN NOT NULL DEFAULT FALSE,
+    owner_id      UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_by    UUID REFERENCES users(id) ON DELETE SET NULL,
     sort_order    INTEGER DEFAULT 0,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (firm_id, code)
+    UNIQUE (company_id, code)
 );
 CREATE INDEX idx_objectives_component ON objectives(component_id);
 
 -- ---------------------------------------------------------------------
--- 5. RISKS  (مخاطر الجودة)
+-- 8. RISKS  (مخاطر الجودة)
 -- ---------------------------------------------------------------------
 CREATE TABLE risks (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    firm_id       UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+    company_id    UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     objective_id  UUID NOT NULL REFERENCES objectives(id) ON DELETE CASCADE,
-    code          VARCHAR(20) NOT NULL,          -- RI-1
+    code          VARCHAR(20) NOT NULL,          -- RI-01
     title_ar      VARCHAR(300) NOT NULL,
     title_en      VARCHAR(300),
     desc_ar       TEXT NOT NULL,
     desc_en       TEXT,
     severity      severity_level NOT NULL DEFAULT 'medium',
     likelihood    SMALLINT CHECK (likelihood BETWEEN 1 AND 5),
-    impact        SMALLINT CHECK (impact     BETWEEN 1 AND 5),
+    impact        SMALLINT CHECK (impact BETWEEN 1 AND 5),
     status        risk_status NOT NULL DEFAULT 'open',
     owner_id      UUID REFERENCES users(id) ON DELETE SET NULL,
     created_by    UUID REFERENCES users(id) ON DELETE SET NULL,
@@ -151,25 +213,23 @@ CREATE TABLE risks (
     sort_order    INTEGER DEFAULT 0,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (firm_id, code)
+    UNIQUE (company_id, code)
 );
 CREATE INDEX idx_risks_objective ON risks(objective_id);
-CREATE INDEX idx_risks_owner     ON risks(owner_id);
-CREATE INDEX idx_risks_severity  ON risks(firm_id, severity);
 
 -- ---------------------------------------------------------------------
--- 6. RESPONSES  (الاستجابات)
+-- 9. RESPONSES  (الإجراءات / الاستجابات)
 -- ---------------------------------------------------------------------
 CREATE TABLE responses (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    firm_id       UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+    company_id    UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     risk_id       UUID NOT NULL REFERENCES risks(id) ON DELETE CASCADE,
     code          VARCHAR(20) NOT NULL,          -- RS-01
     title_ar      VARCHAR(300) NOT NULL,
     title_en      VARCHAR(300),
     desc_ar       TEXT NOT NULL,
     desc_en       TEXT,
-    resp_type     response_type   NOT NULL DEFAULT 'prev',
+    resp_type     response_type NOT NULL DEFAULT 'prev',
     status        response_status NOT NULL DEFAULT 'inprog',
     assigned_to   UUID REFERENCES users(id) ON DELETE SET NULL,
     created_by    UUID REFERENCES users(id) ON DELETE SET NULL,
@@ -178,17 +238,16 @@ CREATE TABLE responses (
     sort_order    INTEGER DEFAULT 0,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (firm_id, code)
+    UNIQUE (company_id, code)
 );
-CREATE INDEX idx_responses_risk   ON responses(risk_id);
-CREATE INDEX idx_responses_status ON responses(firm_id, status);
+CREATE INDEX idx_responses_risk ON responses(risk_id);
 
 -- ---------------------------------------------------------------------
--- 6.5 TESTS  (اختبارات فاعلية الإجراء — بين الاستجابة والنتيجة)
+-- 10. TESTS  (اختبارات فاعلية الإجراء — بين الإجراء والنتيجة)
 -- ---------------------------------------------------------------------
 CREATE TABLE tests (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    firm_id       UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+    company_id    UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     response_id   UUID NOT NULL REFERENCES responses(id) ON DELETE CASCADE,
     code          VARCHAR(20) NOT NULL,          -- TS-01
     title_ar      VARCHAR(300) NOT NULL,
@@ -202,16 +261,16 @@ CREATE TABLE tests (
     sort_order    INTEGER DEFAULT 0,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (firm_id, code)
+    UNIQUE (company_id, code)
 );
 CREATE INDEX idx_tests_response ON tests(response_id);
 
 -- ---------------------------------------------------------------------
--- 7. RESULTS  (نتائج تنفيذ الاختبار)
+-- 11. RESULTS  (نتائج تنفيذ الاختبار)
 -- ---------------------------------------------------------------------
 CREATE TABLE results (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    firm_id       UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+    company_id    UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     test_id       UUID NOT NULL REFERENCES tests(id) ON DELETE CASCADE,
     code          VARCHAR(20) NOT NULL,          -- OC-01
     title_ar      VARCHAR(300) NOT NULL,
@@ -224,127 +283,71 @@ CREATE TABLE results (
     tested_at     TIMESTAMPTZ,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (firm_id, code)
+    UNIQUE (company_id, code)
 );
 CREATE INDEX idx_results_test ON results(test_id);
 
 -- ---------------------------------------------------------------------
--- 7.5 REGISTRATION ATTEMPTS  (منع تكرار إنشاء الحساب عند تعدد النقر/إعادة الإرسال)
---     مفتاح idempotency يُنشئه المتصفح مرة واحدة لكل محاولة تسجيل، فيمنع
---     إنشاء أكثر من شركة/مستخدم واحد لنفس الطلب حتى مع الضغط عدة مرات.
--- ---------------------------------------------------------------------
-CREATE TABLE registration_attempts (
-    idempotency_key VARCHAR(80) PRIMARY KEY,
-    firm_id         UUID REFERENCES firms(id) ON DELETE CASCADE,
-    user_id         UUID REFERENCES users(id) ON DELETE CASCADE,
-    firm_code       VARCHAR(20),
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- ---------------------------------------------------------------------
--- 8. ATTACHMENTS  (المرفقات — أدلة الجودة)
+-- 12. ATTACHMENTS  (المرفقات — أدلة الجودة)
 -- ---------------------------------------------------------------------
 CREATE TABLE attachments (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    firm_id      UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+    company_id   UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     item_kind    item_kind NOT NULL,
     item_id      UUID NOT NULL,
-    file_name    VARCHAR(255) NOT NULL,
-    file_path    TEXT NOT NULL,
-    mime_type    VARCHAR(100),
+    file_name    VARCHAR(300) NOT NULL,
+    file_url     TEXT NOT NULL,
+    mime_type    VARCHAR(120),
     size_bytes   BIGINT,
     uploaded_by  UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX idx_attach_item ON attachments(firm_id, item_kind, item_id);
+CREATE INDEX idx_attachments_item ON attachments(item_kind, item_id);
 
 -- ---------------------------------------------------------------------
--- 9. CHAT MESSAGES  (الدردشة المرتبطة بالبنود)
---    كل رسالة مرتبطة بمكوّن، واختيارياً ببند داخله (هدف/خطر/استجابة/نتيجة)
---    item_id = NULL  →  دردشة عامة على مستوى المكوّن
+-- 13. CHAT MESSAGES  (الدردشة المرتبطة بالبنود)
 -- ---------------------------------------------------------------------
 CREATE TABLE chat_messages (
-    id            BIGSERIAL PRIMARY KEY,
-    firm_id       UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
-    component_id  UUID NOT NULL REFERENCES components(id) ON DELETE CASCADE,
-    item_kind     item_kind,                       -- NULL = component-level
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id    UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    component_id  UUID REFERENCES components(id) ON DELETE CASCADE,
+    item_kind     item_kind,
     item_id       UUID,
-    sender_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_code     VARCHAR(20),
+    user_id       UUID REFERENCES users(id) ON DELETE SET NULL,
     body          TEXT NOT NULL,
-    reply_to_id   BIGINT REFERENCES chat_messages(id) ON DELETE SET NULL,
-    attachment_id UUID REFERENCES attachments(id) ON DELETE SET NULL,
-    edited_at     TIMESTAMPTZ,
-    deleted_at    TIMESTAMPTZ,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CHECK ((item_kind IS NULL AND item_id IS NULL) OR (item_kind IS NOT NULL AND item_id IS NOT NULL))
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX idx_chat_component ON chat_messages(firm_id, component_id, created_at DESC);
-CREATE INDEX idx_chat_item      ON chat_messages(firm_id, item_kind, item_id, created_at DESC);
-CREATE INDEX idx_chat_sender    ON chat_messages(sender_id);
+CREATE INDEX idx_chat_company ON chat_messages(company_id, created_at);
 
--- ---------------------------------------------------------------------
--- 10. CHAT READS  (سجل القراءة — الرسائل غير المقروءة)
---     صف واحد لكل (رسالة، مستخدم) عند فتحها.
---     الرسالة غير مقروءة للمستخدم إذا لم يوجد صف مطابق.
--- ---------------------------------------------------------------------
 CREATE TABLE chat_reads (
-    message_id  BIGINT NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
-    user_id     UUID   NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    read_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (message_id, user_id)
+    user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    message_id   UUID NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
+    read_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, message_id)
 );
-CREATE INDEX idx_reads_user ON chat_reads(user_id);
 
 -- ---------------------------------------------------------------------
--- 11. ACTIVITY LOG  (سجل العمليات — من أنشأ/عدّل ومتى)
+-- 14. ACTIVITY LOG  (سجل النشاط)
 -- ---------------------------------------------------------------------
 CREATE TABLE activity_log (
-    id          BIGSERIAL PRIMARY KEY,
-    firm_id     UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id  UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     user_id     UUID REFERENCES users(id) ON DELETE SET NULL,
-    action      VARCHAR(40) NOT NULL,             -- created | updated | deleted | status_changed
-    item_kind   item_kind NOT NULL,
-    item_id     UUID NOT NULL,
+    action      VARCHAR(40) NOT NULL,
+    item_kind   item_kind,
+    item_id     UUID,
     old_value   JSONB,
     new_value   JSONB,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX idx_log_item ON activity_log(firm_id, item_kind, item_id, created_at DESC);
+CREATE INDEX idx_activity_company ON activity_log(company_id, created_at DESC);
 
--- =====================================================================
---  VIEWS  (تُستخدم مباشرة في الشاشات)
--- =====================================================================
-
--- عدد الرسائل غير المقروءة لكل مستخدم على مستوى المكوّن
-CREATE OR REPLACE VIEW v_unread_by_component AS
-SELECT u.id            AS user_id,
-       m.firm_id,
-       m.component_id,
-       COUNT(*)        AS unread_count
-FROM   chat_messages m
-JOIN   users u        ON u.firm_id = m.firm_id
-LEFT   JOIN chat_reads r ON r.message_id = m.id AND r.user_id = u.id
-WHERE  r.message_id IS NULL
-  AND  m.sender_id <> u.id
-  AND  m.deleted_at IS NULL
-GROUP  BY u.id, m.firm_id, m.component_id;
-
--- عدد الرسائل غير المقروءة لكل بند (خطر/هدف/استجابة/نتيجة)
-CREATE OR REPLACE VIEW v_unread_by_item AS
-SELECT u.id AS user_id, m.firm_id, m.component_id, m.item_kind, m.item_id,
-       COUNT(*) AS unread_count
-FROM   chat_messages m
-JOIN   users u ON u.firm_id = m.firm_id
-LEFT   JOIN chat_reads r ON r.message_id = m.id AND r.user_id = u.id
-WHERE  r.message_id IS NULL
-  AND  m.sender_id <> u.id
-  AND  m.deleted_at IS NULL
-  AND  m.item_id IS NOT NULL
-GROUP  BY u.id, m.firm_id, m.component_id, m.item_kind, m.item_id;
-
--- إحصائيات كل مكوّن (بطاقات الشاشة الرئيسية وشاشة المكوّن)
+-- ---------------------------------------------------------------------
+-- 15. VIEWS
+-- ---------------------------------------------------------------------
 CREATE OR REPLACE VIEW v_component_stats AS
-SELECT c.id AS component_id, c.firm_id, c.slug, c.seq, c.name_ar, c.name_en,
+SELECT c.id AS component_id, c.company_id, c.slug, c.seq, c.name_ar, c.name_en,
        COUNT(DISTINCT o.id)                                              AS objectives_count,
        COUNT(DISTINCT k.id)                                              AS risks_count,
        COUNT(DISTINCT k.id) FILTER (WHERE k.severity = 'high')           AS risks_high,
@@ -363,67 +366,41 @@ LEFT JOIN  tests      t ON t.response_id  = p.id
 LEFT JOIN  results    x ON x.test_id      = t.id
 GROUP BY   c.id;
 
--- =====================================================================
---  TRIGGERS  (تحديث updated_at تلقائياً)
--- =====================================================================
+CREATE OR REPLACE VIEW v_unread_by_component AS
+SELECT u.id AS user_id, m.component_id, COUNT(*) AS unread
+FROM   users u
+JOIN   chat_messages m ON m.company_id = u.company_id AND m.user_id <> u.id
+LEFT   JOIN chat_reads r ON r.message_id = m.id AND r.user_id = u.id
+WHERE  r.message_id IS NULL
+GROUP BY u.id, m.component_id;
+
+CREATE OR REPLACE VIEW v_unread_by_item AS
+SELECT u.id AS user_id, m.component_id, m.item_code, COUNT(*) AS unread
+FROM   users u
+JOIN   chat_messages m ON m.company_id = u.company_id AND m.user_id <> u.id
+LEFT   JOIN chat_reads r ON r.message_id = m.id AND r.user_id = u.id
+WHERE  r.message_id IS NULL
+GROUP BY u.id, m.component_id, m.item_code;
+
+-- ---------------------------------------------------------------------
+-- 16. TRIGGER  (تحديث updated_at تلقائياً)
+-- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
-BEGIN NEW.updated_at = now(); RETURN NEW; END; $$ LANGUAGE plpgsql;
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
 DO $$
 DECLARE tbl TEXT;
 BEGIN
-  FOREACH tbl IN ARRAY ARRAY['firms','users','objectives','risks','responses','tests','results'] LOOP
-    EXECUTE format('CREATE TRIGGER trg_%1$s_updated BEFORE UPDATE ON %1$s
-                    FOR EACH ROW EXECUTE FUNCTION set_updated_at();', tbl);
+  FOREACH tbl IN ARRAY ARRAY['companies','users','components','objectives','risks',
+                             'responses','tests','results'] LOOP
+    EXECUTE format(
+      'CREATE TRIGGER trg_%I_updated BEFORE UPDATE ON %I
+       FOR EACH ROW EXECUTE FUNCTION set_updated_at()', tbl, tbl);
   END LOOP;
 END $$;
 
 COMMIT;
-
--- =====================================================================
---  SEED — المكوّنات الثمانية لكل شركة جديدة
---  استبدل :firm_id بمعرّف الشركة بعد إنشائها
--- =====================================================================
--- INSERT INTO components (firm_id, slug, seq, name_ar, name_en) VALUES
---  (:firm_id,'gov',    1,'الحوكمة والقيادة',                         'Governance and Leadership'),
---  (:firm_id,'ethics', 2,'المتطلبات الأخلاقية ذات الصلة',            'Relevant Ethical Requirements'),
---  (:firm_id,'accept', 3,'قبول واستمرار العلاقات مع العملاء والارتباطات','Acceptance and Continuance'),
---  (:firm_id,'perf',   4,'أداء الارتباط',                            'Engagement Performance'),
---  (:firm_id,'res',    5,'الموارد',                                  'Resources'),
---  (:firm_id,'info',   6,'المعلومات والاتصال',                        'Information and Communication'),
---  (:firm_id,'mon',    7,'المراقبة والمعالجة',                        'Monitoring and Remediation'),
---  (:firm_id,'ra',     8,'عملية تقييم المخاطر',                      'Risk Assessment Process');
-
--- =====================================================================
---  QUERIES المستخدمة في الواجهة
--- =====================================================================
-
--- (1) شجرة مكوّن كامل + عدد غير المقروء لكل بند
--- SELECT o.code, o.title_ar, k.code, k.title_ar, k.severity,
---        COALESCE(ui.unread_count,0) AS unread
--- FROM objectives o
--- LEFT JOIN risks k ON k.objective_id = o.id
--- LEFT JOIN v_unread_by_item ui
---        ON ui.item_kind='risk' AND ui.item_id = k.id AND ui.user_id = :me
--- WHERE o.component_id = :component_id
--- ORDER BY o.sort_order, k.sort_order;
-
--- (2) رسائل بند محدد (شامل الأبناء يتم تجميعه في طبقة التطبيق)
--- SELECT m.*, u.full_name_ar, (r.message_id IS NULL AND m.sender_id <> :me) AS is_unread
--- FROM chat_messages m
--- JOIN users u ON u.id = m.sender_id
--- LEFT JOIN chat_reads r ON r.message_id = m.id AND r.user_id = :me
--- WHERE m.firm_id = :firm_id AND m.item_kind = :kind AND m.item_id = :item_id
---   AND m.deleted_at IS NULL
--- ORDER BY m.created_at;
-
--- (3) تعليم الرسائل المعروضة كمقروءة
--- INSERT INTO chat_reads (message_id, user_id)
--- SELECT id, :me FROM chat_messages
--- WHERE firm_id = :firm_id AND component_id = :component_id AND sender_id <> :me
--- ON CONFLICT DO NOTHING;
-
--- (4) تعديل ربط رسالة ببند آخر
--- UPDATE chat_messages
---    SET component_id = :new_component, item_kind = :new_kind, item_id = :new_item
---  WHERE id = :message_id AND firm_id = :firm_id;
